@@ -1,4 +1,4 @@
-const CACHE = 'english-daily-v29';
+const CACHE = 'english-daily-v30';
 const FILES = ['./', 'index.html', 'style.css', 'data.js', 'data2.js', 'data3.js', 'data4.js', 'data5.js', 'data6.js', 'data7.js', 'data8.js', 'data9.js', 'data10.js', 'data11.js', 'data12.js', 'data13.js', 'data14.js', 'app.js', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'icon-180.png'];
 
 self.addEventListener('install', e => {

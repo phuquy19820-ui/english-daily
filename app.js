@@ -9,7 +9,7 @@ const ICS_DAYS = ['SU','MO','TU','WE','TH','FR','SA'];
 /* ---------- hồ sơ học viên (mỗi người một bộ tiến độ riêng, lưu ngay trên máy) ---------- */
 const OLD_KEY = 'english-daily-v1', REG_KEY = 'english-daily-profiles-v1', PCOL = ['#4f7cff','#e8590c','#2f9e44','#ae3ec9','#d6336c','#0c8599','#f08c00'];
 let REG;
-function regSave() { try { localStorage.setItem(REG_KEY, JSON.stringify(REG)); } catch (e) {} }
+function regSave() { try { localStorage.setItem(REG_KEY, JSON.stringify(REG)); mirror(); } catch (e) {} }
 function regLoad() {
   try { REG = JSON.parse(localStorage.getItem(REG_KEY)); } catch (e) { REG = null; }
   if (!REG || !Array.isArray(REG.profiles) || !REG.profiles.length) {
@@ -33,7 +33,7 @@ function load() {
 }
 let saveWarned = false;
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  try { localStorage.setItem(KEY, JSON.stringify(S)); mirror(); }
   catch (e) { if (!saveWarned) { saveWarned = true; toast('⚠️ Không lưu được dữ liệu (trình duyệt chặn lưu trữ).'); } }
 }
 load();
@@ -1232,6 +1232,7 @@ views.remind = {render() {
    <label class="chk"><input type="checkbox" ${humanOn() ? 'checked' : ''} onchange="A.humanOpt(this.checked)"> Ưu tiên bản ghi âm <b>người thật</b> cho từ đơn (Wikimedia, khi có)</label>
    <div class="row"><button class="btn sm" onclick="A.sayA('Hello! This is an American voice. Nice to meet you.','US')">🔊 Thử giọng Mỹ</button><button class="btn sm ghost" onclick="A.sayA('Hello! This is a British voice. Lovely to meet you.','GB')">🔊 Thử giọng Anh</button><button class="btn sm ghost" onclick="A.accent()">Đổi giọng mặc định (hiện: ${accent()})</button><button class="btn sm ghost" onclick="A.speed()">Đổi tốc độ đọc (hiện: ${speedF().toFixed(1)}×)</button></div>
    <p class="muted">👤 Đang học với hồ sơ: <b>${esc(curProfile().name)}</b> · ${REG.profiles.length} học viên trên máy này. Tiến độ tự lưu ngay khi học.</p>
+   ${storageStatus()}
    <div class="row"><button class="btn sm" onclick="A.pshow()">👤 Đổi / thêm học viên</button><button class="btn sm ghost" onclick="A.backupAll()">⬇️ Sao lưu tất cả học viên</button><button class="btn sm ghost" onclick="A.restoreBak()">♻️ Khôi phục bản dự phòng hôm nay</button></div>
    <div class="row"><button class="btn sm ghost" onclick="A.backup()">⬇️ Sao lưu hồ sơ này</button><label class="btn sm ghost">⬆️ Khôi phục<input type="file" accept=".json" hidden onchange="A.restore(this.files[0])"></label><button class="btn sm bad" onclick="A.reset()">Xóa toàn bộ</button></div></div>`;
 }};
@@ -1634,6 +1635,71 @@ const A = window.A = {
   } catch (e) { toast('File không hợp lệ.'); } }); },
   reset() { if (confirm('Xóa toàn bộ tiến độ và cài đặt của "' + curProfile().name + '"?')) { localStorage.removeItem(KEY); load(); save(); rerender(); } }
 };
+
+/* ---------- bản sao dự phòng thứ hai: IndexedDB + file tự động (phòng khi trình duyệt xóa dữ liệu trang) ---------- */
+var idbP = null, mirT = null, fileT = null, fileH = null, PERSIST = null, lastFile = 0, filePending = false;
+function idb() { return idbP ||= new Promise((res, rej) => { try { const r = indexedDB.open('english-daily-db', 1); r.onupgradeneeded = () => r.result.createObjectStore('kv'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } }); }
+const idbSet = (k, v) => idb().then(db => new Promise((res, rej) => { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(v, k); t.oncomplete = res; t.onerror = () => rej(t.error); })).catch(() => {});
+const idbGet = k => idb().then(db => new Promise((res, rej) => { const q = db.transaction('kv').objectStore('kv').get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); })).catch(() => undefined);
+const isFreshObj = o => !o || (!Object.keys(o.vocab || {}).length && !Object.keys(o.log || {}).length && !(o.writing || []).length && !o.path && !o.rmit && !o.notebook && !o.ctest && !(o.custom || []).length);
+function allData() { const o = {reg: REG, data: {}}; REG.profiles.forEach(p => { try { o.data[p.id] = JSON.parse(localStorage.getItem(pkey(p.id)) || '{}'); } catch (e) {} }); return o; }
+function mirror() {
+  clearTimeout(mirT);
+  mirT = setTimeout(() => { idbSet('reg', JSON.stringify(REG)); idbSet('p:' + REG.active, JSON.stringify(S)); idbSet('savedAt', Date.now()); }, 300);
+  if (fileH) { clearTimeout(fileT); fileT = setTimeout(fileWrite, 2000); }
+}
+async function fileWrite() {
+  if (!fileH) return;
+  try {
+    if ((await fileH.queryPermission({mode: 'readwrite'})) !== 'granted') { filePending = true; return; }
+    const w = await fileH.createWritable(); await w.write(JSON.stringify(allData())); await w.close(); lastFile = Date.now(); filePending = false;
+  } catch (e) {}
+}
+function restoreFrom(reg, datas) {  /* ghi lại dữ liệu từ bản sao dự phòng rồi tải lại trang */
+  try { sessionStorage.setItem('ed-recovered', '1'); } catch (e) {}
+  localStorage.setItem(REG_KEY, JSON.stringify(reg));
+  Object.keys(datas).forEach(id => localStorage.setItem(pkey(id), typeof datas[id] === 'string' ? datas[id] : JSON.stringify(datas[id])));
+  location.reload();
+}
+async function recover() {
+  try { if (sessionStorage.getItem('ed-recovered')) { sessionStorage.removeItem('ed-recovered'); toast('♻️ Đã tự khôi phục tiến độ học từ bản sao dự phòng.'); return; } } catch (e) {}
+  if (!isFreshObj(S)) { REG.profiles.forEach(p => { try { const d = localStorage.getItem(pkey(p.id)); if (d) idbSet('p:' + p.id, d); } catch (e) {} }); idbSet('reg', JSON.stringify(REG)); return; }
+  try {
+    const r = await idbGet('reg'); if (!r) return;
+    const reg = JSON.parse(r), datas = {};
+    for (const p of reg.profiles) { const d = await idbGet('p:' + p.id); if (d && !isFreshObj(JSON.parse(d))) datas[p.id] = d; }
+    if (Object.keys(datas).length) restoreFrom(reg, datas);
+  } catch (e) {}
+}
+async function fileInit() {
+  try { fileH = (await idbGet('fileH')) || null; } catch (e) { fileH = null; }
+  /* sau khi mở máy lại, trình duyệt chỉ cho ghi file sau một cú bấm → xử lý ở lần bấm đầu tiên */
+  document.addEventListener('click', async function once() {
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().then(ok => PERSIST = ok); } catch (e) {}
+    if (!fileH) return;
+    document.removeEventListener('click', once);
+    try {
+      let p = await fileH.queryPermission({mode: 'readwrite'}); if (p !== 'granted') p = await fileH.requestPermission({mode: 'readwrite'});
+      if (p !== 'granted') return;
+      if (isFreshObj(S)) { const o = JSON.parse(await (await fileH.getFile()).text()); if (o && o.reg && o.data && Object.values(o.data).some(d => !isFreshObj(d))) return restoreFrom(o.reg, o.data); }
+      fileWrite();
+    } catch (e) {}
+  });
+}
+try { navigator.storage && navigator.storage.persisted && navigator.storage.persisted().then(v => PERSIST = v); } catch (e) {}
+Object.assign(A, {
+  async fileOn() {
+    if (!window.showSaveFilePicker) return toast('Trình duyệt này chưa hỗ trợ (hãy dùng Chrome/Edge trên máy tính).');
+    try {
+      fileH = await showSaveFilePicker({suggestedName: 'english-daily-tien-do.json', types: [{description: 'Tiến độ English Daily', accept: {'application/json': ['.json']}}]});
+      await idbSet('fileH', fileH); await fileWrite(); toast('✅ Đã bật tự động lưu ra file.'); rerender();
+    } catch (e) {}
+  },
+  async fileOff() { fileH = null; await idbSet('fileH', null); toast('Đã tắt tự động lưu ra file.'); rerender(); }
+});
+const storageStatus = () => `<p class="muted">💾 <b>Độ an toàn của dữ liệu:</b> ${PERSIST ? '✅ trình duyệt đã cam kết giữ dữ liệu' : '⚠️ trình duyệt <b>chưa cam kết</b> giữ dữ liệu (có thể bị xóa nếu bạn bật “xóa dữ liệu khi đóng trình duyệt”, dùng cửa sổ riêng tư, hoặc dọn dẹp bộ nhớ)'} · bản sao thứ hai trong IndexedDB: ✅${fileH ? ' · tự động lưu ra file: ✅' + (filePending ? ' (bấm vào trang để cho phép ghi)' : (lastFile ? ' lúc ' + new Date(lastFile).toLocaleTimeString('vi') : '')) : ''}</p>
+ <div class="row">${window.showSaveFilePicker ? (fileH ? '<button class="btn sm ghost" onclick="A.fileOff()">Tắt tự động lưu ra file</button>' : '<button class="btn sm" onclick="A.fileOn()">📁 Bật tự động lưu tiến độ ra file (khuyên dùng)</button>') : '<span class="muted">Tự động lưu ra file chỉ có trên Chrome/Edge máy tính. Trên điện thoại hãy thêm app vào Màn hình chính và sao lưu định kỳ.</span>'}</div>`;
+recover(); fileInit();
 
 /* ---------- giao diện chọn học viên ---------- */
 function pChip() { const b = document.getElementById('who'); if (!b) return; const p = curProfile(); b.innerHTML = '<i style="background:' + p.color + '">' + esc(p.name.trim().charAt(0).toUpperCase()) + '</i> ' + esc(p.name); }
