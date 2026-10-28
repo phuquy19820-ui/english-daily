@@ -1,0 +1,16 @@
+{
+  "name": "English Daily – Học tiếng Anh mỗi ngày",
+  "short_name": "English Daily",
+  "description": "Từ vựng, ngữ pháp, phát âm Anh-Mỹ, nghe tài chính – kế toán, viết, IELTS.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#2563eb",
+  "lang": "vi",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon.svg", "sizes": "any", "type": "image/svg+xml"}
+  ]
+}
