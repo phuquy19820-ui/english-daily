@@ -101,14 +101,4 @@ details>summary{cursor:pointer}
 .prow.on .pgo{border-color:#4f7cff}.prow .pgo small{margin-left:8px;color:#4f7cff}
 .prow i{width:30px;height:30px;line-height:30px;margin-right:8px}
 
-.tkwrap{display:flex;gap:16px;flex-wrap:wrap}.tkside{flex:0 0 180px;text-align:center}.tkmain{flex:1;min-width:260px}
-.tkav{width:170px;height:187px;background:linear-gradient(#dbe7ff,#eef3ff);border-radius:50%/45%;border:3px solid var(--bd)}
-.tkav.talk{box-shadow:0 0 0 4px #4f7cff55}.tkav .eyes{animation:tkblink 4s infinite;transform-origin:100px 102px}
-@keyframes tkblink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
-.tkname{font-weight:700;margin-top:6px}.tkname small{font-weight:400;color:var(--mu,#777)}
-.tkset{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin-bottom:8px}
-.tkchat{height:300px;overflow:auto;border:1px solid var(--bd);border-radius:12px;padding:8px;background:var(--bg)}
-.tkm{margin:6px 0;padding:8px 10px;border-radius:12px;max-width:88%}.tkm.ai{background:var(--card);border:1px solid var(--bd)}.tkm.me{background:#4f7cff;color:#fff;margin-left:auto}
-.tkfb{margin-top:6px;font-size:.88rem;color:#b45309;border-top:1px dashed var(--bd);padding-top:4px}.tkerr{color:#c92a2a;font-size:.9rem;padding:6px}
-.tkbar{display:flex;gap:6px;margin:8px 0}.tkbar input{flex:1}
-.tkst{margin-top:4px;font-size:.72rem;color:#888}
+
