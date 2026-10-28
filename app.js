@@ -173,7 +173,7 @@ function startTimer(elId, secs, onEnd) {
 function stopTimer() { if (TM) clearInterval(TM); TM = null; }
 
 /* ---------- router ---------- */
-const NAV = [['home','🏠','Hôm nay'],['i65','🎯','IELTS 6.5'],['path','🗺️','Lộ trình'],['rmit','🏫','Thi xếp lớp (viết–nói)'],['ctest','📝','Test trắc nghiệm'],['stats','🏆','Thành tích'],['video','🎬','Video người thật'],['vocab','🃏','Từ vựng'],['topics','🗂️','Chủ đề'],['grammar','📘','Ngữ pháp'],['pron','🗣️','Phát âm'],['listen','🎧','Nghe'],['write','✍️','Viết'],['ielts','🎓','IELTS'],['remind','⏰','Nhắc nhở'],['method','🧭','Phương pháp']];
+const NAV = [['home','🏠','Hôm nay'],['i65','🎯','IELTS 6.5'],['path','🗺️','Lộ trình'],['think2','📚','Giáo trình Think 2'],['rmit','🏫','Thi xếp lớp (viết–nói)'],['ctest','📝','Test trắc nghiệm'],['stats','🏆','Thành tích'],['video','🎬','Video người thật'],['vocab','🃏','Từ vựng'],['topics','🗂️','Chủ đề'],['grammar','📘','Ngữ pháp'],['pron','🗣️','Phát âm'],['listen','🎧','Nghe'],['write','✍️','Viết'],['ielts','🎓','IELTS'],['remind','⏰','Nhắc nhở'],['method','🧭','Phương pháp']];
 const views = {};
 function route() {
   stopTimer(); rmStop(); nbCleanup(); ctStop(); exStop(); playToken++; if (window.speechSynthesis) speechSynthesis.cancel();
@@ -1685,6 +1685,88 @@ Object.assign(A, {
     const t = DATA.exam30.find(x => x.id === EX.open), text = ($('#wt').value || '').trim(); if (!t || !text) return toast('Bài viết đang trống.');
     const words = wcount(text); S.writing.unshift({title: '⏱️ ' + t.title, text, words, date: todayStr()}); save();
     toast('💾 Đã lưu (' + words + ' từ)'); if (words >= t.min * 0.8) markDone('write'); else toast('Đã lưu. Viết đủ ~' + Math.ceil(t.min * 0.8) + ' từ để hoàn thành nhiệm vụ.');
+  }
+});
+
+/* =====================  GIÁO TRÌNH THINK 2 (khung theo mục lục sách; bài tập do app tự soạn)  ===================== */
+const T2 = {u: null, tab: 'map', ans: {}};
+const t2s = () => (S.think2 ||= {done: {}, quiz: {}});
+const t2units = () => (DATA.think2 && DATA.think2.units) || [];
+const T2_STEPS = [['map', '📋 Đọc lộ trình unit'], ['vocab', '🔤 Học xong từ vựng'], ['grammar', '📘 Đọc ghi chú ngữ pháp'], ['quiz', '✅ Bài kiểm tra ngữ pháp (đúng ≥ 5/6)'], ['speak', '🗣️ Luyện nói & phát âm'], ['write', '✍️ Nộp bài viết'], ['book', '📖 Làm bài trong sách']];
+const t2pct = u => { const d = t2s().done[u.id] || {}; return Math.round(T2_STEPS.filter(x => d[x[0]]).length / T2_STEPS.length * 100); };
+function t2mark(uid, k, on = true) { const d = (t2s().done[uid] ||= {}); if (on) d[k] = true; else delete d[k]; save(); }
+const t2bar = p => `<div style="height:8px;background:var(--bd);border-radius:6px;overflow:hidden"><div style="height:8px;width:${p}%;background:#4f7cff"></div></div>`;
+const t2say = t => `<button class="acc" title="Nghe" onclick="A.sayA(this.dataset.t,'US')" data-t="${esc(t)}">🔊</button>`;
+function t2Unit(u) {
+  const tabs = [['map', '📋 Lộ trình'], ['vocab', '🔤 Từ vựng'], ['grammar', '📘 Ngữ pháp'], ['speak', '🗣️ Nói & phát âm'], ['write', '✍️ Viết']];
+  const d = t2s().done[u.id] || {}, head = `<button class="btn ghost" onclick="A.t2back()">← Các unit</button><h1>${u.no ? 'Unit ' + u.no + ' · ' : ''}${esc(u.title)}</h1><p class="muted">${esc(u.vi)} · sách trang ${esc(u.pages)} · tiến độ ${t2pct(u)}%</p>${t2bar(t2pct(u))}
+    <div class="tabs wrap" style="margin-top:10px">${tabs.map(t => `<button class="${T2.tab === t[0] ? 'on' : ''}" onclick="A.t2tab('${t[0]}')">${t[1]}</button>`).join('')}</div>`;
+  const li = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  if (T2.tab === 'vocab') return head + `<div class="card"><table class="tbl"><tr><th>Từ</th><th>Nghĩa & ví dụ</th><th></th></tr>${u.vocab.map((v, i) => `<tr><td><b>${esc(v[0])}</b><br>${sayBtns(v[0])}</td><td>${esc(v[1])}<br><small class="muted">${esc(v[2])}</small> ${t2say(v[2])}</td><td><button class="btn sm ghost" title="Thêm vào ôn từ vựng" onclick="A.t2add(${i})">➕</button></td></tr>`).join('')}</table>
+    <div class="row"><button class="btn sm" onclick="A.t2addall()">➕ Thêm tất cả vào mục Từ vựng (ôn cách quãng)</button><button class="btn" onclick="A.t2done('vocab')">${d.vocab ? '✅ Đã học xong' : 'Tôi đã học xong từ vựng'}</button></div></div>`;
+  if (T2.tab === 'grammar') {
+    const A_ = T2.ans[u.id] || {}, n = u.quiz.length, all = Object.keys(A_).length === n, score = u.quiz.filter((q, i) => A_[i] === q.a).length, best = t2s().quiz[u.id];
+    return head + u.notes.map(x => `<div class="card"><h3>${esc(x.h)}</h3><p>${esc(x.t)}</p>${x.ex.map(e => `<p class="muted">▸ ${esc(e)} ${t2say(e)}</p>`).join('')}</div>`).join('') +
+      `<div class="row"><button class="btn sm" onclick="A.t2done('grammar')">${d.grammar ? '✅ Đã đọc xong ghi chú' : 'Tôi đã đọc xong ghi chú'}</button></div>
+      <h2>✅ Bài kiểm tra ngữ pháp${best ? ` <small class="muted">· điểm cao nhất ${best.score}/${best.total}</small>` : ''}</h2>
+      ${u.quiz.map((q, i) => `<div class="card"><b>${i + 1}. ${esc(q.q)}</b><div class="row" style="flex-wrap:wrap">${q.o.map((o, j) => { const picked = A_[i] === j, st = A_[i] == null ? '' : (j === q.a ? 'background:#d3f9d8;color:#0b5d1e' : (picked ? 'background:#ffe3e3;color:#a61e1e' : '')); return `<button class="btn sm ghost" style="${st}" ${A_[i] != null ? 'disabled' : ''} onclick="A.t2ans(${i},${j})">${esc(o)}</button>`; }).join('')}</div>${A_[i] != null ? `<small class="muted">${A_[i] === q.a ? '✔ Đúng. ' : '✘ Chưa đúng. '}${esc(q.e)}</small>` : ''}</div>`).join('')}
+      ${all ? `<div class="card center"><h3>Kết quả: ${score}/${n} ${score >= 5 ? '🎉' : '💪'}</h3><p class="muted">${score >= 5 ? 'Tốt lắm! Bạn đã hoàn thành bài kiểm tra này.' : 'Đọc lại ghi chú ngữ pháp rồi làm lại để đạt ít nhất 5/6.'}</p><button class="btn" onclick="A.t2redo()">Làm lại</button></div>` : ''}`;
+  }
+  if (T2.tab === 'speak') return head + `<div class="card"><h3>🗣️ Đề luyện nói</h3>${li(u.speak)}<p class="muted">Mỗi đề nói 30–60 giây. Có thể quay lại giọng nói của mình bằng điện thoại và nghe lại để tự sửa.</p></div>
+    <div class="card"><h3>🔊 Phát âm: ${esc(u.map.pron)}</h3><p>${esc(u.pron.tip)}</p><table class="tbl">${u.pron.words.map(w => `<tr><td><b>${esc(w)}</b></td><td>${sayBtns(w)}</td><td><button class="btn sm ghost" onclick="A.t2mic(this.dataset.w)" data-w="${esc(w)}">🎙️ Đọc thử</button></td></tr>`).join('')}</table>
+    <div id="t2mic" class="muted"></div><div class="row"><button class="btn" onclick="A.t2done('speak')">${d.speak ? '✅ Đã luyện xong' : 'Tôi đã luyện xong'}</button></div></div>`;
+  if (T2.tab === 'write') return head + `<div class="card"><h3>✍️ ${esc(u.write.title)}</h3><p><b>Đề bài:</b> ${esc(u.write.prompt)}</p><small class="muted">Tối thiểu ${u.write.min} từ</small></div>
+    <div class="card"><h3>📐 Dàn ý gợi ý</h3><ol>${u.write.outline.map(o => `<li>${esc(o)}</li>`).join('')}</ol></div>
+    <div class="card"><textarea id="wt" rows="12" placeholder="Viết bài của bạn ở đây (tiếng Anh)…" oninput="A.wcount(${u.write.min})"></textarea>
+    <div class="row"><span id="wc" class="muted">0 / ${u.write.min} từ</span><button class="btn" onclick="A.gstart('gbox','wt','essay',${u.write.min})">📝 Chấm điểm & sửa lỗi</button><button class="btn" onclick="A.t2save()">💾 Lưu bài</button></div><div id="gbox"></div></div>`;
+  /* tab lộ trình */
+  const m = u.map;
+  return head + `<div class="grid two"><div class="card"><h3>🎯 Chức năng giao tiếp</h3>${li(m.functions)}</div><div class="card"><h3>📘 Ngữ pháp</h3>${li(m.grammar)}</div>
+    <div class="card"><h3>🔤 Từ vựng</h3>${li(m.vocab)}</div><div class="card"><h3>📚 Kỹ năng trong sách</h3>${li(m.skills)}<p class="muted">🗣️ Phát âm: ${esc(m.pron)}<br>💡 ${esc(m.think)}</p></div></div>
+    <div class="card"><h3>🗓️ Kế hoạch gợi ý trong 7 ngày</h3><ol><li>Từ vựng: học 10 từ, thêm vào mục Từ vựng.</li><li>Ngữ pháp: đọc ghi chú, tự đặt 3 câu ví dụ.</li><li>Làm bài kiểm tra ngữ pháp, sửa lỗi sai.</li><li>Nói & phát âm: luyện 3 đề nói, đọc thử các từ phát âm.</li><li>Đọc và nghe trong sách (trang ${esc(u.pages)}).</li><li>Viết bài và nhờ app chấm, sửa lỗi.</li><li>Ôn lại từ vựng, làm lại bài kiểm tra, làm phần Review trong sách (nếu có).</li></ol></div>
+    <div class="card"><h3>✅ Danh sách việc cần làm</h3>${T2_STEPS.map(x => `<label class="chk"><input type="checkbox" ${d[x[0]] ? 'checked' : ''} onchange="A.t2chk('${x[0]}',this.checked)"> ${esc(x[1])}${x[0] === 'book' ? ' <small class="muted">(sách trang ' + esc(u.pages) + ')</small>' : ''}</label>`).join('')}</div>`;
+}
+views.think2 = {render() {
+  const us = t2units(); if (!us.length) return '<h1>📚 Giáo trình Think 2</h1><div class="card">Chưa tải được dữ liệu giáo trình.</div>';
+  if (T2.u) { const u = us.find(x => x.id === T2.u); if (u) { if (T2.tab === 'map' && !(t2s().done[u.id] || {}).map) { /* mở lộ trình = đã đọc */ t2s().done[u.id] = Object.assign(t2s().done[u.id] || {}, {map: true}); save(); } return t2Unit(u); } T2.u = null; }
+  const b = DATA.think2.book, total = Math.round(us.reduce((a, u) => a + t2pct(u), 0) / us.length);
+  return `<h1>📚 Giáo trình Think 2 (B1)</h1><div class="card"><b>${esc(b.title)}</b><br><small>${esc(b.authors)} · ${esc(b.pub)}</small>
+    <p class="muted">Module học theo <b>khung chương trình</b> của sách (tên unit, ngữ pháp, từ vựng, chức năng, kỹ năng, số trang). Từ vựng, ghi chú, bài kiểm tra, đề nói và đề viết trong module do app <b>tự soạn</b> để luyện thêm; các bài đọc, nghe và bài tập gốc vẫn làm trong sách của bạn (số trang ghi sẵn ở mỗi unit).</p>
+    ${t2bar(total)}<small class="muted">Tiến độ toàn giáo trình: ${total}%</small></div>
+    <div class="grid two">${us.map(u => `<a class="card link" href="#think2" onclick="A.t2open('${u.id}')"><small class="muted">${u.no ? 'Unit ' + u.no : 'Mở đầu'} · trang ${esc(u.pages)}</small><h3>${esc(u.title)}</h3><small>${esc(u.vi)}</small><br><small class="muted">${esc(u.map.grammar[0] || '')}</small>${t2bar(t2pct(u))}<small class="muted">${t2pct(u)}% hoàn thành</small></a>`).join('')}</div>`;
+}};
+Object.assign(A, {
+  t2open(id) { T2.u = id; T2.tab = 'map'; rerender(); window.scrollTo(0, 0); },
+  t2back() { T2.u = null; rerender(); window.scrollTo(0, 0); },
+  t2tab(t) { T2.tab = t; rerender(); window.scrollTo(0, 0); },
+  t2chk(k, on) { t2mark(T2.u, k, on); rerender(); },
+  t2done(k) { t2mark(T2.u, k, true); toast('✅ Đã đánh dấu hoàn thành'); rerender(); },
+  t2add(i) {
+    const u = t2units().find(x => x.id === T2.u), v = u.vocab[i], id = 't2' + u.id + '_' + i;
+    if (S.custom.some(c => c.id === id)) return toast('Từ này đã có trong mục Từ vựng.');
+    S.custom.push({id, w: v[0], ipa: '', vi: v[1], ex: v[2], cat: 'my'}); save(); toast('➕ Đã thêm “' + v[0] + '” vào ôn từ vựng.');
+  },
+  t2addall() {
+    const u = t2units().find(x => x.id === T2.u); let n = 0;
+    u.vocab.forEach((v, i) => { const id = 't2' + u.id + '_' + i; if (!S.custom.some(c => c.id === id)) { S.custom.push({id, w: v[0], ipa: '', vi: v[1], ex: v[2], cat: 'my'}); n++; } });
+    save(); toast(n ? '➕ Đã thêm ' + n + ' từ vào mục Từ vựng.' : 'Các từ này đã có sẵn.');
+  },
+  t2ans(i, j) {
+    const u = t2units().find(x => x.id === T2.u), a = (T2.ans[u.id] ||= {}); if (a[i] != null) return; a[i] = j;
+    if (Object.keys(a).length === u.quiz.length) {
+      const score = u.quiz.filter((q, k) => a[k] === q.a).length, best = t2s().quiz[u.id];
+      if (!best || score > best.score) t2s().quiz[u.id] = {score, total: u.quiz.length, date: todayStr()};
+      if (score >= 5) { t2mark(u.id, 'quiz'); markDone('grammar'); } else save();
+    }
+    rerender();
+  },
+  t2redo() { delete T2.ans[T2.u]; rerender(); },
+  t2mic(w) { micTry(w, (said, pct) => { const el = document.getElementById('t2mic'); if (el) el.innerHTML = `Bạn nói: “${esc(said)}” → khớp <b>${pct}%</b> ${pct >= 80 ? '🎉 Rất tốt!' : '— nghe lại mẫu rồi thử lần nữa.'}`; }); },
+  t2save() {
+    const u = t2units().find(x => x.id === T2.u), text = ($('#wt').value || '').trim(); if (!text) return toast('Bài viết đang trống.');
+    const words = wcount(text); S.writing.unshift({title: '📚 Think 2 · ' + (u.no ? 'Unit ' + u.no + ': ' : '') + u.write.title, text, words, date: todayStr()}); save();
+    if (words >= u.write.min * 0.8) { t2mark(u.id, 'write'); markDone('write'); toast('💾 Đã lưu (' + words + ' từ) và đánh dấu hoàn thành.'); }
+    else toast('Đã lưu. Viết đủ ~' + Math.ceil(u.write.min * 0.8) + ' từ để hoàn thành bước này.');
   }
 });
 
