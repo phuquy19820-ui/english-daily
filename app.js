@@ -176,7 +176,7 @@ function stopTimer() { if (TM) clearInterval(TM); TM = null; }
 const NAV = [['home','🏠','Hôm nay'],['i65','🎯','IELTS 6.5'],['path','🗺️','Lộ trình'],['rmit','🏫','Thi xếp lớp (viết–nói)'],['ctest','📝','Test trắc nghiệm'],['stats','🏆','Thành tích'],['video','🎬','Video người thật'],['vocab','🃏','Từ vựng'],['topics','🗂️','Chủ đề'],['grammar','📘','Ngữ pháp'],['pron','🗣️','Phát âm'],['listen','🎧','Nghe'],['write','✍️','Viết'],['ielts','🎓','IELTS'],['remind','⏰','Nhắc nhở'],['method','🧭','Phương pháp']];
 const views = {};
 function route() {
-  stopTimer(); rmStop(); nbCleanup(); ctStop(); playToken++; if (window.speechSynthesis) speechSynthesis.cancel();
+  stopTimer(); rmStop(); nbCleanup(); ctStop(); exStop(); playToken++; if (window.speechSynthesis) speechSynthesis.cancel();
   const id = (location.hash.slice(1) || 'home');
   const v = views[id] || views.home;
   $('#view').innerHTML = v.render();
@@ -330,6 +330,7 @@ views.listen = {render() {
 let W = {open: null, cat: 'Tất cả', view: null};
 const wcount = t => (t.trim().match(/\S+/g) || []).length;
 views.write = {render() {
+  if (WM === 'exam' && W.view == null) return exView();
   if (!W.open && W.view == null && WM !== 'topics') return nbView();
   if (W.view != null) {
     const e = S.writing[W.view]; if (!e) { W.view = null; return views.write.render(); }
@@ -351,6 +352,32 @@ views.write = {render() {
   <div class="grid two">${writingList().filter(w => W.cat === 'Tất cả' || w.cat === W.cat).map(w => `<a class="card link" href="#write" onclick="A.wopen('${w.id}')"><small class="muted">${esc(w.cat)}</small><h3>${esc(w.title)}</h3><small>≥ ${w.min} từ</small></a>`).join('')}</div>${hist}`;
 }};
 
+/* =====================  LUYỆN THI VIẾT 30 PHÚT (đề + video + đồng hồ + chấm + bài mẫu)  ===================== */
+const EX = {open: null, cat: 'Tất cả'};
+let EXT = null;
+function exStop() { if (EXT) clearInterval(EXT); EXT = null; if (window.speechSynthesis) speechSynthesis.cancel(); }
+function exView() {
+  const list = DATA.exam30 || [];
+  if (EX.open) {
+    const t = list.find(x => x.id === EX.open); if (!t) { EX.open = null; return exView(); }
+    const f = nbFind(t.vid), v = f && f.v;
+    return `<button class="btn ghost" onclick="A.exback()">← Danh sách đề</button><h1>⏱️ ${esc(t.title)}</h1><p class="muted">${esc(t.vi)} · ${esc(t.cat)}</p>
+    <div class="card"><b>Đề bài:</b> ${esc(t.prompt)}<br><small class="muted">Mục tiêu ≥ ${t.min} từ trong 30 phút</small></div>
+    ${v ? `<div class="card"><h3>🎬 Bước 1 – Xem & nghe người thật (lấy ý tưởng)</h3>${vcardHTML(v)}<p class="muted">Bấm ▶ để xem. Bật <b>CC</b> (phụ đề tiếng Anh) để vừa nghe vừa đọc lời, ghi từ khóa. Video cùng chủ đề để gợi ý ý tưởng, không phải đáp án.</p></div>` : ''}
+    <div class="card"><h3>✍️ Bước 2 – Viết trong 30 phút</h3>
+    <div class="row"><b id="ext" style="font-size:1.6rem">30:00</b><button class="btn" onclick="A.exstart()">▶️ Bắt đầu tính giờ</button><button class="btn sm ghost" onclick="A.exstop()">⏹️ Dừng giờ</button></div>
+    <textarea id="wt" rows="14" placeholder="Viết bài của bạn ở đây (tiếng Anh)…" oninput="A.wcount(${t.min})"></textarea>
+    <div class="row"><span id="wc" class="muted">0 / ${t.min} từ</span><button class="btn" onclick="A.gstart('gbox','wt','essay',${t.min})">📝 Chấm điểm & sửa lỗi</button><button class="btn" onclick="A.exsave()">💾 Lưu bài</button></div><div id="gbox"></div></div>
+    <div class="grid two"><div class="card"><h3>📐 Dàn ý gợi ý</h3><ol>${t.outline.map(o => `<li>${esc(o)}</li>`).join('')}</ol></div><div class="card"><h3>💬 Cụm từ hữu ích</h3><ul>${t.phrases.map(o => `<li>${esc(o)}</li>`).join('')}</ul></div></div>
+    <div class="card"><h3>📖 Bước 3 – Bài mẫu & nghe đọc</h3><p class="muted">Hãy viết xong rồi mới xem bài mẫu. Giọng đọc bài mẫu là giọng máy (Mỹ/Anh); nghe giọng người thật ở video phía trên.</p>
+    <div class="row"><button class="btn sm" onclick="A.exlisten('US')">🔊 Nghe giọng Mỹ</button><button class="btn sm ghost" onclick="A.exlisten('GB')">🔊 Nghe giọng Anh</button><button class="btn sm ghost" onclick="A.tstop()">⏹️ Dừng</button></div>
+    <details><summary><b>Xem bài mẫu (${wcount(t.model)} từ)</b></summary>${t.model.split(/\n+/).map(p => `<p>${esc(p)}</p>`).join('')}</details></div>`;
+  }
+  const cats = ['Tất cả', ...new Set(list.map(x => x.cat))];
+  return `<h1>✍️ Viết</h1>${wtabs()}<p class="muted">${list.length} đề luyện thi viết 30 phút. Mỗi đề có <b>video người thật</b> cùng chủ đề, đồng hồ 30 phút, chấm điểm và bài mẫu để nghe đọc.</p>
+  <div class="tabs wrap">${cats.map(c => `<button class="${EX.cat === c ? 'on' : ''}" onclick="A.excat(this.dataset.c)" data-c="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+  <div class="grid two">${list.filter(x => EX.cat === 'Tất cả' || x.cat === EX.cat).map(x => `<a class="card link" href="#write" onclick="A.exopen('${x.id}')"><small class="muted">${esc(x.cat)}</small><h3>${esc(x.title)}</h3><small>${esc(x.vi)}</small><br><small class="muted">🎬 có video · ≥ ${x.min} từ · 30 phút</small></a>`).join('')}</div>`;
+}
 /* =====================  IELTS  ===================== */
 views.write.init = () => nbInit();
 let I = {tab: 'over', r: null, sub: false, ans: {}, sp: {part: 1, q: 0, cue: 0, phase: 'idle'}, rec: null};
@@ -1053,7 +1080,7 @@ let WM = 'topics';
 let NB = {genre: 'all', vid: null, edit: null, player: null, rate: 1, A: null, B: null, loop: null, gf: 'all', title: ''};
 const nbState = () => (S.notebook ||= []);
 function nbFind(id) { for (const g of DATA.shortVideos) { const v = g.items.find(x => x[0] === id); if (v) return {v, g: g.g}; } return null; }
-function wtabs() { return `<div class="tabs wrap">${[['topics', '✍️ Chủ đề viết'], ['video', '🎬 Nghe – xem – viết lại'], ['notes', '📓 Sổ tay của tôi (' + nbState().length + ')']].map(t => `<button class="${WM === t[0] ? 'on' : ''}" onclick="A.wmode('${t[0]}')">${t[1]}</button>`).join('')}</div>`; }
+function wtabs() { return `<div class="tabs wrap">${[['topics', '✍️ Chủ đề viết'], ['exam', '⏱️ Luyện thi 30 phút'], ['video', '🎬 Nghe – xem – viết lại'], ['notes', '📓 Sổ tay của tôi (' + nbState().length + ')']].map(t => `<button class="${WM === t[0] ? 'on' : ''}" onclick="A.wmode('${t[0]}')">${t[1]}</button>`).join('')}</div>`; }
 function ytApi(cb) {
   if (window.YT && YT.Player) return cb();
   (window._ytq ||= []).push(cb);
@@ -1324,7 +1351,7 @@ const A = window.A = {
   i65addall() { const tr = DATA.topics.find(t => t.id === 'ielts'); let n = 0; tr.units.forEach(u => u.w.forEach((x, i) => { const id = tkey(u.id, i); if (!isAdded(id)) { S.custom.push({id, w: x[0], ipa: x[1], vi: x[2], ex: x[3], cat: 'ielts65'}); n++; } })); save(); toast('Đã thêm ' + n + ' từ vào thẻ ôn (mỗi ngày học tối đa 10 thẻ mới)'); },
   ieltsMode(v) { S.settings.ielts = v; save(); const t = TASKS.find(x => x.id === 'ielts'); if (t) { t.optional = !v; t.name = v ? 'IELTS 6.5 (1 phần mỗi ngày)' : 'IELTS (tuỳ chọn)'; t.href = v ? '#i65' : '#ielts'; } toast(v ? 'Đã bật chế độ IELTS (ẩn nội dung tài chính)' : 'Đã tắt chế độ IELTS (hiện tất cả nội dung)'); rerender(); },
   /* nghe – xem – viết lại */
-  wmode(m) { nbCleanup(); WM = m; NB.vid = null; NB.edit = null; W = {open: null, cat: W.cat, view: null}; rerender(); window.scrollTo(0, 0); },
+  wmode(m) { nbCleanup(); exStop(); WM = m; NB.vid = null; NB.edit = null; W = {open: null, cat: W.cat, view: null}; rerender(); window.scrollTo(0, 0); },
   nbgenre(g) { NB.genre = g; rerender(); },
   nbgf(g) { NB.gf = g; rerender(); },
   nbrandom() { const gs = DATA.shortVideos.filter(g => NB.genre === 'all' || g.g === NB.genre), g = gs[Math.floor(Math.random() * gs.length)], v = g.items[Math.floor(Math.random() * g.items.length)]; A.nbpick(v[0], g.g); },
@@ -1635,6 +1662,31 @@ const A = window.A = {
   } catch (e) { toast('File không hợp lệ.'); } }); },
   reset() { if (confirm('Xóa toàn bộ tiến độ và cài đặt của "' + curProfile().name + '"?')) { localStorage.removeItem(KEY); load(); save(); rerender(); } }
 };
+
+Object.assign(A, {
+  excat(c) { EX.cat = c; rerender(); },
+  exopen(id) { EX.open = id; exStop(); rerender(); window.scrollTo(0, 0); },
+  exback() { EX.open = null; exStop(); rerender(); window.scrollTo(0, 0); },
+  exstart() {
+    exStop(); const end = Date.now() + 30 * 60000;
+    const tick = () => { const el = document.getElementById('ext'); const left = Math.max(0, Math.round((end - Date.now()) / 1000));
+      if (el) { el.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'); el.style.color = left <= 300 ? '#c92a2a' : ''; }
+      if (left <= 0) { exStop(); toast('⏰ Hết 30 phút! Hãy hoàn thành câu đang viết rồi bấm Chấm điểm.'); } };
+    tick(); EXT = setInterval(tick, 1000); toast('⏱️ Bắt đầu! Chúc bạn viết tốt.');
+  },
+  exstop() { if (EXT) clearInterval(EXT); EXT = null; toast('Đã dừng đồng hồ.'); },
+  exlisten(acc) {
+    const t = DATA.exam30.find(x => x.id === EX.open); if (!t) return;
+    const lines = t.model.replace(/\n+/g, ' ').split(/(?<=[.!?])\s+/), tok = ++playToken;
+    const next = i => { if (tok !== playToken || i >= lines.length) return; ttsSay(lines[i], 0.95, 1, () => setTimeout(() => next(i + 1), 200), acc); };
+    next(0);
+  },
+  exsave() {
+    const t = DATA.exam30.find(x => x.id === EX.open), text = ($('#wt').value || '').trim(); if (!t || !text) return toast('Bài viết đang trống.');
+    const words = wcount(text); S.writing.unshift({title: '⏱️ ' + t.title, text, words, date: todayStr()}); save();
+    toast('💾 Đã lưu (' + words + ' từ)'); if (words >= t.min * 0.8) markDone('write'); else toast('Đã lưu. Viết đủ ~' + Math.ceil(t.min * 0.8) + ' từ để hoàn thành nhiệm vụ.');
+  }
+});
 
 /* ---------- bản sao dự phòng thứ hai: IndexedDB + file tự động (phòng khi trình duyệt xóa dữ liệu trang) ---------- */
 var idbP = null, mirT = null, fileT = null, fileH = null, PERSIST = null, lastFile = 0, filePending = false;
