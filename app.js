@@ -1724,6 +1724,7 @@ function t2Unit(u) {
   return head + `<div class="grid two"><div class="card"><h3>🎯 Chức năng giao tiếp</h3>${li(m.functions)}</div><div class="card"><h3>📘 Ngữ pháp</h3>${li(m.grammar)}</div>
     <div class="card"><h3>🔤 Từ vựng</h3>${li(m.vocab)}</div><div class="card"><h3>📚 Kỹ năng trong sách</h3>${li(m.skills)}<p class="muted">🗣️ Phát âm: ${esc(m.pron)}<br>💡 ${esc(m.think)}</p></div></div>
     <div class="card"><h3>🗓️ Kế hoạch gợi ý trong 7 ngày</h3><ol><li>Từ vựng: học 10 từ, thêm vào mục Từ vựng.</li><li>Ngữ pháp: đọc ghi chú, tự đặt 3 câu ví dụ.</li><li>Làm bài kiểm tra ngữ pháp, sửa lỗi sai.</li><li>Nói & phát âm: luyện 3 đề nói, đọc thử các từ phát âm.</li><li>Đọc và nghe trong sách (trang ${esc(u.pages)}).</li><li>Viết bài và nhờ app chấm, sửa lỗi.</li><li>Ôn lại từ vựng, làm lại bài kiểm tra, làm phần Review trong sách (nếu có).</li></ol></div>
+${u.extra && Object.keys(u.extra).length ? `<div class="card"><h3>📖 Còn có trong sách</h3><ul>${[u.extra.welcome, u.extra.exam, u.extra.pron, u.extra.git, u.extra.speakAct].filter(Boolean).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
     <div class="card"><h3>✅ Danh sách việc cần làm</h3>${T2_STEPS.map(x => `<label class="chk"><input type="checkbox" ${d[x[0]] ? 'checked' : ''} onchange="A.t2chk('${x[0]}',this.checked)"> ${esc(x[1])}${x[0] === 'book' ? ' <small class="muted">(sách trang ' + esc(u.pages) + ')</small>' : ''}</label>`).join('')}</div>`;
 }
 views.think2 = {render() {
