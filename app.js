@@ -1691,7 +1691,7 @@ async function tkAsk(onText) {
   let good = null; try { good = JSON.parse(localStorage.getItem('tk-good')); } catch (e) {}
   const tries = []; if (good) tries.push([good.m, good.v]);
   for (const m of await tkModels(key)) for (const v of tkVariants(m)) if (!good || good.m !== m || good.v !== v) tries.push([m, v]);
-  let last = '', errs = [], bad = {}; try { bad = JSON.parse(localStorage.getItem('tk-bad')) || {}; } catch (e) {}
+  let last = '', errs = [], bad = {}, quota = 0; try { bad = JSON.parse(localStorage.getItem('tk-bad')) || {}; } catch (e) {}
   const now = Date.now(), skip = m => bad[m] && now - bad[m] < 180000;  /* mô hình vừa báo bận → nghỉ 3 phút */
   let usable = tries.filter(t => !skip(t[0])); if (!usable.length) usable = tries;
   const seenOk = new Set(), failedModels = new Set();
@@ -1702,12 +1702,13 @@ async function tkAsk(onText) {
     if (r.err) {
       last = r.err; errs.push(m + (v !== 'none' ? ' [' + v + ']' : '') + ': ' + r.err.slice(0, 110));
       if (/API key|permission/i.test(last) && [400, 401, 403].includes(r.status)) { last = 'Khóa Gemini không đúng hoặc chưa được bật. ' + last; errs = []; break; }
-      if (r.status === 429) { last = 'Đã dùng hết hạn mức miễn phí tạm thời, thử lại sau ít phút.'; errs = []; break; }
+      if (r.status === 429) { quota++; bad[m] = Date.now() + (/PerDay|per day/i.test(last) ? 3600000 : 0); }  /* hết lượt của mô hình này → thử mô hình khác (mỗi mô hình có hạn mức riêng) */
       if (r.status === 404) { try { localStorage.removeItem('tk-models2'); localStorage.removeItem('tk-good'); } catch (e) {} }
-      if (r.status !== 400) { failedModels.add(m); bad[m] = Date.now(); try { localStorage.setItem('tk-bad', JSON.stringify(bad)); localStorage.removeItem('tk-good'); } catch (e) {} }  /* quá tải/treo: sang mô hình khác, không thử biến thể khác */
+      if (r.status !== 400) { failedModels.add(m); if (r.status !== 429) bad[m] = Date.now(); try { localStorage.setItem('tk-bad', JSON.stringify(bad)); localStorage.removeItem('tk-good'); } catch (e) {} }  /* quá tải/treo: sang mô hình khác, không thử biến thể khác */
       if (r.status === 0 && /mạng tới/.test(last)) break;
     } else { last = 'Gemini không trả lời (có thể bị chặn nội dung).'; failedModels.add(m); }
   }
+  if (quota && quota >= errs.length - 1) { TK.err = 'Tất cả mô hình Gemini miễn phí đều đã hết lượt tạm thời. Hãy chờ 1–2 phút (hết lượt theo phút) hoặc đến ngày mai (hết lượt theo ngày) rồi thử lại. Có thể dùng nút “Sao chép lời nhắc + mở Gemini” bên dưới trong lúc chờ.'; return null; }
   TK.err = errs.length > 1 ? 'Không mô hình nào dùng được:\n' + errs.slice(0, 6).join('\n') : last; return null;
 }
 function tkMouth(on) {
