@@ -1721,7 +1721,7 @@ function t2Unit(u) {
   }
   if (T2.tab === 'listen') {
     const x = t2x(u); if (!x.listen) return head + '<div class="card">Chưa có bài nghe.</div>';
-    return head + `<div class="card"><h3>🎧 ${esc(x.listen.title)}</h3><p class="muted">Máy đọc hai giọng (A và B). Nghe trước, trả lời câu hỏi, rồi mới mở lời thoại để đối chiếu.</p>
+    return head + auCard(u) + `<div class="card"><h3>🎧 Hội thoại luyện nghe do app soạn: ${esc(x.listen.title)}</h3><p class="muted">Máy đọc hai giọng (A và B). Nghe trước, trả lời câu hỏi, rồi mới mở lời thoại để đối chiếu.</p>
       <div class="row"><button class="btn" onclick="A.t2dialog('US')">▶️ Nghe (giọng Mỹ)</button><button class="btn ghost" onclick="A.t2dialog('GB')">▶️ Nghe (giọng Anh)</button><button class="btn sm ghost" onclick="A.tstop()">⏹️ Dừng</button></div>
       <details><summary><b>Xem lời thoại</b></summary>${x.listen.lines.map(l => `<p><b>${l[0]}:</b> ${esc(l[1])} ${t2say(l[1])}</p>`).join('')}</details></div><h2>Câu hỏi nghe hiểu</h2>` + t2qblock(u.id + ':listen', x.listen.qs);
   }
@@ -1758,6 +1758,7 @@ views.think2 = {render() {
   return `<h1>📚 Giáo trình Think 2 (B1)</h1><div class="card"><b>${esc(b.title)}</b><br><small>${esc(b.authors)} · ${esc(b.pub)}</small>
     <p class="muted">Module học theo <b>khung chương trình</b> của sách (tên unit, ngữ pháp, từ vựng, chức năng, kỹ năng, số trang). Từ vựng, ghi chú, bài kiểm tra, đề nói và đề viết trong module do app <b>tự soạn</b> để luyện thêm; các bài đọc, nghe và bài tập gốc vẫn làm trong sách của bạn (số trang ghi sẵn ở mỗi unit).</p>
     ${t2bar(total)}<small class="muted">Tiến độ toàn giáo trình: ${total}%</small></div>
+    ${auSetup()}
     <h2>📚 Các unit</h2><div class="grid two">${us.map(u => `<a class="card link" href="#think2" onclick="A.t2open('${u.id}')"><small class="muted">${u.no ? 'Unit ' + u.no : 'Mở đầu'} · trang ${esc(u.pages)}</small><h3>${esc(u.title)}</h3><small>${esc(u.vi)}</small><br><small class="muted">${esc(u.map.grammar[0] || '')}</small>${t2bar(t2pct(u))}<small class="muted">${t2pct(u)}% hoàn thành</small></a>`).join('')}</div>
     <h2>📝 Test yourself (ôn theo cặp unit)</h2><div class="grid two">${(DATA.think2r || []).map(r => { const b = (t2s().review || {})[r.id]; return `<a class="card link" href="#think2" onclick="A.t2ropen('${r.id}')"><h3>${esc(r.title)}</h3><small class="muted">sách trang ${esc(r.pages)} · ${r.qs.length} câu${b ? ' · cao nhất ' + b.score + '/' + b.total : ''}</small></a>`; }).join('')}</div>`;
 }};
@@ -1808,6 +1809,74 @@ Object.assign(A, {
     else toast('Đã lưu. Viết đủ ~' + Math.ceil(u.write.min * 0.8) + ' từ để hoàn thành bước này.');
   }
 });
+
+/* =====================  AUDIO SÁCH (chạy riêng trên máy: thư mục do người học chọn, không tải lên đâu cả)  ===================== */
+const AU = {dir: null, files: {}, pending: false, url: null, cur: null, map: null, rate: 1, msg: ''};
+const AU_KEY = 'english-daily-t2audio-map';  /* thiết lập riêng của thiết bị, không nằm trong tiến độ học */
+const auKey = (cd, n) => cd + '.' + String(n).padStart(2, '0');
+function auMap() {
+  if (AU.map) return AU.map;
+  const m = {}, R = (DATA.think2audio || {}).ranges || {};
+  Object.keys(R).forEach(uid => R[uid].forEach(seg => { const [c1, n1] = seg[0].split('.').map(Number), n2 = Number(seg[1].split('.')[1]); for (let n = n1; n <= n2; n++) m[auKey(c1, n)] = uid; }));
+  try { Object.assign(m, JSON.parse(localStorage.getItem(AU_KEY) || '{}')); } catch (e) {}
+  return (AU.map = m);
+}
+const auTracks = uid => Object.keys(auMap()).filter(k => auMap()[k] === uid).sort((a, b) => Number(a.split('.')[0]) - Number(b.split('.')[0]) || Number(a.split('.')[1]) - Number(b.split('.')[1]));
+const auCount = () => Object.keys(AU.files).length;
+async function auScan(dir) {
+  const files = {};
+  async function walk(d, depth) { for await (const [name, h] of d.entries()) { if (h.kind === 'directory') { if (depth < 3) await walk(h, depth + 1); } else { const m = name.match(/CD(\d)[_\- ]?(\d{1,2})\.(mp3|m4a|wav|ogg)$/i); if (m) files[auKey(m[1], +m[2])] = h; } } }
+  await walk(dir, 0); return files;
+}
+async function auInit() {
+  try {
+    const d = await idbGet('auDir'); if (!d) return;
+    AU.dir = d; const p = await d.queryPermission({mode: 'read'});
+    if (p === 'granted') { AU.files = await auScan(d); if (location.hash === '#think2') rerender(); } else AU.pending = true;
+  } catch (e) {}
+}
+function auCard(u) {
+  const ks = auTracks(u.id), pages = (DATA.think2audio || {}).pages || {};
+  if (!auCount()) return `<div class="card"><h3>🎵 Audio trong sách</h3><p class="muted">Chưa nối thư mục audio. Vào trang <b>Giáo trình Think 2</b> (bấm “← Các unit”) và bấm <b>“Chọn thư mục audio”</b>. Audio chỉ được phát ngay trên máy bạn.</p></div>`;
+  return `<div class="card"><h3>🎵 Audio trong sách (${ks.length} bài gán cho unit này)</h3><p class="muted">Các bài này do bạn có sẵn trên máy; app chỉ phát lại, không tải lên đâu. Nếu thấy một bài không thuộc unit này, hãy chỉnh ở phần “Gán audio cho unit” ở trang chính.</p>
+    <div class="row"><audio id="aup" controls ${AU.url ? 'src="' + AU.url + '"' : ''} style="width:100%"></audio></div>
+    <div class="row"><small class="muted">Tốc độ:</small>${[0.75, 0.9, 1].map(r => `<button class="btn sm ${AU.rate === r ? '' : 'ghost'}" onclick="A.aurate(${r})">${r}×</button>`).join('')}${AU.cur ? `<small class="muted">Đang chọn: CD${AU.cur.split('.')[0]} · bài ${Number(AU.cur.split('.')[1])}</small>` : ''}</div>
+    <table class="tbl">${ks.map(k => `<tr><td><b>CD${k.split('.')[0]} · bài ${Number(k.split('.')[1])}</b><br><small class="muted">${esc(pages[k] || '')}</small></td><td>${AU.files[k] ? '' : '<small class="muted">(không thấy file)</small>'}</td><td><button class="btn sm ${AU.cur === k ? '' : 'ghost'}" ${AU.files[k] ? '' : 'disabled'} onclick="A.auplay('${k}')">▶️ Nghe</button></td></tr>`).join('')}</table></div>`;
+}
+function auSetup() {
+  const sup = !!window.showDirectoryPicker, n = auCount(), m = auMap();
+  const rows = ['1', '2'].map(cd => { const lim = cd === '1' ? 44 : 36; let h = ''; for (let i = 1; i <= lim; i++) { const k = auKey(cd, i); h += `<tr><td>CD${cd} · bài ${i}</td><td><select onchange="A.aumapset('${k}',this.value)"><option value="">—</option>${t2units().map(u => `<option value="${u.id}" ${m[k] === u.id ? 'selected' : ''}>${u.no ? 'Unit ' + u.no : 'Welcome'}</option>`).join('')}</select></td><td>${AU.files[k] ? '✔' : ''}</td></tr>`; } return h; }).join('');
+  return `<div class="card"><h3>🎵 Audio của sách (chỉ chạy trên máy này)</h3>
+    <p class="muted">Chọn thư mục chứa các file <code>Think_SB2_CD1_01.mp3</code>… Audio được đọc ngay từ máy bạn, <b>không tải lên mạng</b> và không nằm trong app công khai. ${sup ? '' : 'Trình duyệt này không hỗ trợ lưu thư mục; mỗi lần mở app bạn cần chọn lại (khuyên dùng Chrome/Edge trên máy tính).'}</p>
+    <div class="row">${sup ? '<button class="btn" onclick="A.aupick()">📂 Chọn thư mục audio</button>' : '<label class="btn">📂 Chọn thư mục audio<input type="file" webkitdirectory multiple hidden onchange="A.aufiles(this.files)"></label>'}${AU.pending ? '<button class="btn" onclick="A.aureconnect()">🔓 Cho phép đọc lại thư mục</button>' : ''}${n ? '<button class="btn sm ghost" onclick="A.auforget()">Bỏ kết nối</button>' : ''}</div>
+    <p>${n ? `✅ Đã nối <b>${n}</b> file audio.` : (AU.pending ? '⚠️ Cần bấm “Cho phép đọc lại thư mục” (Chrome yêu cầu mỗi lần mở lại).' : 'Chưa nối thư mục.')} ${AU.msg ? esc(AU.msg) : ''}</p>
+    <details><summary><b>Gán audio cho unit</b> (đã gợi ý sẵn theo trang sách – chỉnh nếu thấy chưa khớp)</summary><p class="muted">Gợi ý này suy ra từ số trang trong sách, nên một vài bài có thể lệch. Nghe thử trong từng unit rồi đổi ở đây nếu cần.</p>
+    <div class="row"><button class="btn sm ghost" onclick="A.aumapreset()">↩️ Khôi phục gợi ý ban đầu</button></div><table class="tbl">${rows}</table></details></div>`;
+}
+Object.assign(A, {
+  async aupick() {
+    try { const d = await showDirectoryPicker({mode: 'read'}); AU.dir = d; AU.pending = false; await idbSet('auDir', d); AU.files = await auScan(d); AU.msg = auCount() ? '' : 'Không thấy file Think_SB2_CD…. Hãy chọn thư mục chứa CD1 và CD2.'; } catch (e) { return; }
+    rerender();
+  },
+  async aureconnect() {
+    try { const p = await AU.dir.requestPermission({mode: 'read'}); if (p === 'granted') { AU.files = await auScan(AU.dir); AU.pending = false; } } catch (e) { toast('Không mở lại được thư mục. Hãy chọn lại.'); }
+    rerender();
+  },
+  aufiles(list) { const files = {}; Array.from(list).forEach(f => { const m = f.name.match(/CD(\d)[_\- ]?(\d{1,2})\.(mp3|m4a|wav|ogg)$/i); if (m) files[auKey(m[1], +m[2])] = f; }); AU.files = files; AU.msg = auCount() ? '' : 'Không thấy file Think_SB2_CD….'; rerender(); },
+  async auforget() { AU.dir = null; AU.files = {}; AU.pending = false; if (AU.audio) { try { AU.audio.pause(); } catch (e) {} } AU.url = null; AU.cur = null; await idbSet('auDir', null); rerender(); },
+  async auplay(k) {
+    const x = AU.files[k]; if (!x) return toast('Chưa có file audio này.');
+    try {
+      toast('⏳ Đang mở bài…'); const f = x.getFile ? await x.getFile() : x;
+      if (AU.url) URL.revokeObjectURL(AU.url); AU.url = URL.createObjectURL(f); AU.cur = k; if (window.speechSynthesis) speechSynthesis.cancel();
+      rerender(); const a = document.getElementById('aup'); if (a) { a.playbackRate = AU.rate; a.play().catch(() => {}); }
+    } catch (e) { toast('Không mở được file. Nếu file đang “chỉ có trên Drive”, hãy chọn “Tải xuống/Khả dụng ngoại tuyến” trong Google Drive.'); }
+  },
+  aurate(r) { AU.rate = r; const a = document.getElementById('aup'); if (a) a.playbackRate = r; rerender(); const b = document.getElementById('aup'); if (b) b.playbackRate = r; },
+  aumapset(k, uid) { const o = JSON.parse(localStorage.getItem(AU_KEY) || '{}'); o[k] = uid; try { localStorage.setItem(AU_KEY, JSON.stringify(o)); } catch (e) {} AU.map = null; auMap(); },
+  aumapreset() { try { localStorage.removeItem(AU_KEY); } catch (e) {} AU.map = null; rerender(); toast('Đã khôi phục gợi ý ban đầu.'); }
+});
+auInit();
 
 /* ---------- bản sao dự phòng thứ hai: IndexedDB + file tự động (phòng khi trình duyệt xóa dữ liệu trang) ---------- */
 var idbP = null, mirT = null, fileT = null, fileH = null, PERSIST = null, lastFile = 0, filePending = false;
