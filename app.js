@@ -271,8 +271,9 @@ views.vocab = {render() {
 /* =====================  GRAMMAR  ===================== */
 let G = {open: null, ans: {}};
 views.grammar = {render() {
+  if (GM !== 'lessons' && !G.open) return GM === 'tenses' ? tenseView() : posView();
   if (!G.open) {
-    return `<h1>📘 Ngữ pháp</h1><p class="muted">Đọc ngắn → làm quiz ngay. Chọn 1 bài mỗi ngày.</p><div class="grid two">${DATA.grammar.map(g => { const sc = S.grammar[g.id]; return `<a class="card link" href="#grammar" onclick="A.gopen('${g.id}')"><h3>${g.title}</h3><small class="muted">Trình độ ${g.level}</small><div>${sc != null ? `Điểm gần nhất: <b>${sc}/${g.quiz.length}</b>` : 'Chưa làm'}</div></a>`; }).join('')}</div>`;
+    return `<h1>📘 Ngữ pháp</h1>${gmTabs()}<p class="muted">Đọc ngắn → làm quiz ngay. Chọn 1 bài mỗi ngày.</p><div class="grid two">${DATA.grammar.map(g => { const sc = S.grammar[g.id]; return `<a class="card link" href="#grammar" onclick="A.gopen('${g.id}')"><h3>${g.title}</h3><small class="muted">Trình độ ${g.level}</small><div>${sc != null ? `Điểm gần nhất: <b>${sc}/${g.quiz.length}</b>` : 'Chưa làm'}</div></a>`; }).join('')}</div>`;
   }
   const g = DATA.grammar.find(x => x.id === G.open), answered = Object.keys(G.ans).length, total = g.quiz.length;
   const score = g.quiz.filter((q, i) => G.ans[i] === q.a).length;
@@ -1877,6 +1878,99 @@ Object.assign(A, {
   aumapreset() { try { localStorage.removeItem(AU_KEY); } catch (e) {} AU.map = null; rerender(); toast('Đã khôi phục gợi ý ban đầu.'); }
 });
 auInit();
+
+/* =====================  NGỮ PHÁP: 13 THÌ + 10 TỪ LOẠI (công thức, giải thích, 45 bài mỗi thì)  ===================== */
+let GM = 'lessons';
+const TG = {id: null, tab: 'learn', set: 0, vals: {}, shown: {}};
+const PG = {id: null, ex: false, set: 0, ans: {}};
+const TS = () => DATA.tenseGuide, TE = () => DATA.tenseEx || {};
+const tsay = t => `<button class="acc" title="Nghe" onclick="A.sayA(this.dataset.t,'US')" data-t="${esc(t)}">🔊</button>`;
+const gmTabs = () => `<div class="tabs wrap">${[['lessons', '📚 Bài học'], ['tenses', '🕒 12 thì: công thức & bài tập'], ['pos', '🔤 10 từ loại']].map(t => `<button class="${GM === t[0] ? 'on' : ''}" onclick="A.gmode('${t[0]}')">${t[1]}</button>`).join('')}</div>`;
+const tprog = id => { const r = (S.tenseEx || {})[id] || {}, n = Object.keys(r).length, ok = Object.values(r).filter(Boolean).length; return {n, ok, total: (TE()[id] || []).length}; };
+const tbar = (a, b) => `<div style="height:8px;background:var(--bd);border-radius:6px;overflow:hidden"><div style="height:8px;width:${b ? Math.round(a / b * 100) : 0}%;background:#4f7cff"></div></div>`;
+function tenseView() {
+  const G_ = TS(); if (!G_) return `<h1>📘 Ngữ pháp</h1>${gmTabs()}<div class="card">Chưa tải được dữ liệu.</div>`;
+  if (TG.id) return tenseDetail(G_.tenses[TG.id]);
+  const m = G_.matrix, total = Object.keys(TE()).reduce((a, k) => a + tprog(k).ok, 0), all = Object.keys(TE()).reduce((a, k) => a + (TE()[k] || []).length, 0);
+  return `<h1>📘 Ngữ pháp</h1>${gmTabs()}
+   <div class="card"><h2>🧩 Bảng tổng hợp 12 thì (nhìn một lần là nhớ cấu trúc)</h2><p>${esc(m.intro)}</p>
+    <div style="overflow-x:auto"><table class="tbl"><tr><th></th>${m.cols.map(c => `<th>${esc(c)}</th>`).join('')}</tr>${m.rows.map(r => `<tr><td><b>${esc(r[0])}</b></td>${r.slice(1).map(c => `<td><code>${esc(c)}</code></td>`).join('')}</tr>`).join('')}</table></div>
+    <h3>💡 Mẹo nhớ</h3><ul>${m.memo.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>
+   <details class="card"><summary><b>❓ Khi nói/viết, chọn thì nào? (hỏi tự nhiên)</b></summary><table class="tbl">${m.choose.map(c => `<tr><td>${esc(c[0])}</td><td><b>${esc(c[1])}</b></td></tr>`).join('')}</table></details>
+   <details class="card"><summary><b>✏️ Quy tắc chia động từ: -s/-es, -ing, -ed</b></summary><h4>Thêm -s / -es (hiện tại đơn, ngôi he/she/it)</h4><ul>${G_.spelling.s.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h4>Thêm -ing</h4><ul>${G_.spelling.ing.map(x => `<li>${esc(x)}</li>`).join('')}</ul><h4>Thêm -ed (quá khứ, quá khứ phân từ có quy tắc)</h4><ul>${G_.spelling.ed.map(x => `<li>${esc(x)}</li>`).join('')}</ul></details>
+   <details class="card"><summary><b>📋 Bảng động từ bất quy tắc thông dụng (${G_.spelling.irregular.length} từ)</b></summary><table class="tbl"><tr><th>V1</th><th>V2</th><th>V3</th><th></th></tr>${G_.spelling.irregular.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${tsay(r[0] + ', ' + r[1].split('/')[0] + ', ' + r[2].split('/')[0])}</td></tr>`).join('')}</table></details>
+   <h2>🗺️ Lộ trình học (dễ → khó)</h2><p class="muted">Đã làm đúng ${total}/${all} bài tập. Mỗi thì có bài giảng và 45 bài luyện.</p>
+   ${G_.groups.map(g => `<h3>${esc(g.name)}</h3><p class="muted">${esc(g.tip)}</p><div class="grid two">${g.ids.map(id => { const t = G_.tenses[id], p = tprog(id); return `<a class="card link" href="#grammar" onclick="A.topen('${id}')"><small class="muted">${t.no}. ${esc(t.group)} · ${esc(t.level)}</small><h3>${esc(t.vi)}</h3><small>${esc(t.en)}</small><br><code>${esc(t.formula.aff)}</code>${tbar(p.ok, p.total)}<small class="muted">${p.ok}/${p.total} bài đúng</small></a>`; }).join('')}</div>`).join('')}`;
+}
+function tenseDetail(t) {
+  const p = tprog(TG.id), head = `<button class="btn ghost" onclick="A.tback()">← Các thì</button><h1>${t.no}. ${esc(t.vi)}</h1><p class="muted">${esc(t.en)} · ${esc(t.group)} · mức ${esc(t.level)}</p>
+   <div class="tabs"><button class="${TG.tab === 'learn' ? 'on' : ''}" onclick="A.ttab('learn')">📖 Bài giảng</button><button class="${TG.tab === 'ex' ? 'on' : ''}" onclick="A.ttab('ex')">✍️ Luyện tập (${p.ok}/${p.total})</button></div>`;
+  if (TG.tab === 'ex') return head + tenseEx(TG.id);
+  const li = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+  return head + `<div class="card"><h3>🎯 Ý chính</h3><p>${esc(t.core)}</p><p class="muted">Trục thời gian: <code>${esc(t.timeline)}</code></p></div>
+   <div class="card" style="border-left:5px solid #4f7cff"><h3>🧮 Công thức</h3><table class="tbl"><tr><td>➕ Khẳng định</td><td><code>${esc(t.formula.aff)}</code></td></tr><tr><td>➖ Phủ định</td><td><code>${esc(t.formula.neg)}</code></td></tr><tr><td>❓ Nghi vấn</td><td><code>${esc(t.formula.q)}</code></td></tr></table></div>
+   <div class="card"><h3>📌 Cách dùng</h3>${t.uses.map(u => `<p><b>${esc(u[0])}</b> – ${esc(u[1])}<br><i>${esc(u[2])}</i> ${tsay(u[2])}</p>`).join('')}</div>
+   <div class="card"><h3>🔎 Dấu hiệu nhận biết</h3><p>${t.signals.map(x => `<span class="chip">${esc(x)}</span>`).join(' ')}</p></div>
+   <div class="card"><h3>📝 Quy tắc cần nhớ</h3>${li(t.rules)}</div>
+   <div class="card"><h3>💬 Ví dụ</h3>${t.examples.map(e => `<p>${esc(e[0])} ${tsay(e[0])}<br><small class="muted">${esc(e[1])}</small></p>`).join('')}</div>
+   <div class="card"><h3>⚠️ Lỗi thường gặp</h3>${t.mistakes.map(m => `<p>❌ <s>${esc(m[0])}</s><br>✅ <b>${esc(m[1])}</b><br><small class="muted">${esc(m[2])}</small></p>`).join('')}</div>
+   <div class="card" style="background:var(--okbg,#e7f5ff)"><h3>🧠 Mẹo nhớ</h3><p>${esc(t.memo)}</p><p class="muted"><b>So sánh:</b> ${esc(t.compare)}</p></div>
+   <div class="row"><button class="btn" onclick="A.ttab('ex')">✍️ Làm 45 bài luyện tập</button></div>`;
+}
+const gnorm = x => String(x).toLowerCase().replace(/[’‘`]/g, "'").replace(/[.?!]+$/g, '').replace(/\s+/g, ' ').trim();
+function tenseEx(id) {
+  const items = TE()[id] || [], per = 15, sets = Math.ceil(items.length / per), set = Math.min(TG.set, sets - 1), res = (S.tenseEx || {})[id] || {}, vals = (TG.vals[id] ||= {}), shown = (TG.shown[id] ||= {});
+  const from = set * per, list = items.slice(from, from + per);
+  return `<div class="card"><p class="muted">Điền dạng đúng của động từ trong ngoặc (viết rút gọn hoặc đầy đủ đều được). Với câu “(Câu hỏi)” hãy viết thành câu hỏi hoàn chỉnh. Không phân biệt chữ hoa/thường và dấu câu cuối.</p>
+   <div class="tabs">${Array.from({length: sets}, (_, k) => { const sub = items.slice(k * per, k * per + per), ok = sub.filter((_, j) => res[k * per + j] === 1).length; return `<button class="${k === set ? 'on' : ''}" onclick="A.tset(${k})">Bộ ${k + 1} (${ok}/${sub.length})</button>`; }).join('')}</div></div>` +
+   list.map((it, j) => { const i = from + j, q = it[0].startsWith('(Câu hỏi)'), st = res[i], checked = shown[i];
+     return `<div class="card q"><p><b>${i + 1}.</b> ${esc(it[0])}</p><div class="row"><input class="gin" style="flex:1;min-width:200px" id="gi${i}" placeholder="${q ? 'Viết câu hỏi hoàn chỉnh…' : 'Điền vào chỗ trống…'}" value="${esc(vals[i] || '')}" oninput="TG.vals['${id}'][${i}]=this.value" onkeydown="if(event.key==='Enter')A.tcheck(${i})" ${checked && st === 1 ? 'disabled' : ''}><button class="btn sm" onclick="A.tcheck(${i})">Kiểm tra</button></div>${checked ? (st === 1 ? '<small style="color:#2f9e44">✔ Chính xác!</small>' : `<small style="color:#c92a2a">✘ Chưa đúng. Đáp án: <b>${esc(it[1][0])}</b>${it[1].length > 1 ? ' <span class="muted">(hoặc: ' + esc(it[1].slice(1, 3).join(' / ')) + ')</span>' : ''}</small>`) : ''}</div>`; }).join('') +
+   `<div class="row"><button class="btn" onclick="A.tcheckset()">Kiểm tra cả bộ</button><button class="btn ghost" onclick="A.treset()">Làm lại thì này</button></div>`;
+}
+function posView() {
+  const P_ = DATA.pos; if (!P_) return `<h1>📘 Ngữ pháp</h1>${gmTabs()}<div class="card">Chưa tải được dữ liệu.</div>`;
+  if (PG.ex) return posEx();
+  if (PG.id) { const p = P_.list.find(x => x.id === PG.id), li = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
+    return `<button class="btn ghost" onclick="A.pback()">← 10 từ loại</button><h1>${esc(p.vi)} <small class="muted">(${esc(p.abbr)} · ${esc(p.en)})</small></h1>
+     <div class="card"><h3>📖 Định nghĩa</h3><p>${esc(p.def)}</p><p><b>Chức năng:</b> ${esc(p.role)}</p><p><b>Vị trí trong câu:</b> ${esc(p.position)}</p></div>
+     <div class="card"><h3>🔎 Dấu hiệu nhận biết</h3>${li(p.signs)}</div>
+     <div class="card"><h3>🗂️ Các loại</h3><table class="tbl">${p.types.map(t => `<tr><td><b>${esc(t[0])}</b><br><small class="muted">${esc(t[1])}</small></td><td>${esc(t[2])} ${tsay(t[2].split(/[,.]/)[0])}</td></tr>`).join('')}</table></div>
+     <div class="card"><h3>💬 Ví dụ</h3>${p.examples.map(e => `<p>${esc(e)} ${tsay(e)}</p>`).join('')}</div>
+     <div class="card"><h3>💡 Mẹo</h3>${li(p.tips)}</div>
+     <div class="card"><h3>⚠️ Lỗi thường gặp</h3>${p.mistakes.map(m => `<p>❌ <s>${esc(m[0])}</s><br>✅ <b>${esc(m[1])}</b><br><small class="muted">${esc(m[2])}</small></p>`).join('')}</div>`; }
+  const done = Object.values(S.posEx || {}).filter(Boolean).length;
+  return `<h1>📘 Ngữ pháp</h1>${gmTabs()}<div class="card"><h2>🔤 10 loại từ loại trong tiếng Anh</h2><p>${esc(P_.intro)}</p><p><b>Trật tự cơ bản:</b> ${esc(P_.sentenceMap)}</p></div>
+   <div class="grid two">${P_.list.map((p, i) => `<a class="card link" href="#grammar" onclick="A.popen('${p.id}')"><small class="muted">${i + 1}</small><h3>${esc(p.vi)} <small class="muted">(${esc(p.abbr)})</small></h3><small>${esc(p.def)}</small></a>`).join('')}</div>
+   <div class="card"><h3>✍️ Bài tập nhận biết từ loại (${P_.ex.length} câu)</h3><p class="muted">Đã đúng ${done}/${P_.ex.length}.</p><button class="btn" onclick="A.pex()">Luyện tập</button></div>`;
+}
+function posEx() {
+  const P_ = DATA.pos, per = 10, sets = Math.ceil(P_.ex.length / per), set = Math.min(PG.set, sets - 1), from = set * per, res = S.posEx || {};
+  const opts = i => { const ok = P_.ex[i][2], arr = [ok]; for (let k = 1; arr.length < 4; k++) { const c = (ok + k * 3 + i) % 10; if (!arr.includes(c)) arr.push(c); } return arr.map((v, j) => [(v * 7 + i * 3 + j) % 11, v]).sort((a, b) => a[0] - b[0]).map(x => x[1]); };
+  return `<button class="btn ghost" onclick="A.pbackex()">← 10 từ loại</button><h1>✍️ Nhận biết từ loại</h1>
+   <div class="tabs">${Array.from({length: sets}, (_, k) => `<button class="${k === set ? 'on' : ''}" onclick="A.pset(${k})">Bộ ${k + 1}</button>`).join('')}</div>` +
+   P_.ex.slice(from, from + per).map((e, j) => { const i = from + j, a = PG.ans[i]; return `<div class="card q"><p><b>${i + 1}.</b> ${esc(e[0]).replace(esc(e[1]), '<mark>' + esc(e[1]) + '</mark>')}</p><p class="muted">Từ <b>${esc(e[1])}</b> là loại từ gì?</p><div class="opts">${opts(i).map(v => { let c = ''; if (a != null) { if (v === e[2]) c = 'ok'; else if (v === a) c = 'no'; } return `<button class="opt ${c}" ${a != null ? 'disabled' : ''} onclick="A.pans(${i},${v})">${esc(P_.list[v].vi)} (${esc(P_.list[v].abbr)})</button>`; }).join('')}</div></div>`; }).join('');
+}
+Object.assign(A, {
+  gmode(m) { GM = m; G = {open: null, ans: {}}; TG.id = null; PG.id = null; PG.ex = false; rerender(); window.scrollTo(0, 0); },
+  topen(id) { TG.id = id; TG.tab = 'learn'; TG.set = 0; rerender(); window.scrollTo(0, 0); },
+  tback() { TG.id = null; rerender(); window.scrollTo(0, 0); },
+  ttab(t) { TG.tab = t; rerender(); window.scrollTo(0, 0); },
+  tset(k) { TG.set = k; rerender(); window.scrollTo(0, 0); },
+  tcheck(i, quiet) {
+    const id = TG.id, it = TE()[id][i], v = (TG.vals[id] || {})[i];
+    if (!v || !String(v).trim()) { if (!quiet) toast('Hãy nhập câu trả lời trước.'); return false; }
+    const ok = it[1].some(a => gnorm(a) === gnorm(v)); ((S.tenseEx ||= {})[id] ||= {})[i] = ok ? 1 : 0; (TG.shown[id] ||= {})[i] = true; save();
+    if (!quiet) { rerender(); const n = Object.values(S.tenseEx[id]).filter(Boolean).length; if (ok && n >= 10) markDone('grammar'); } return ok;
+  },
+  tcheckset() { const id = TG.id, per = 15, from = TG.set * per, n = Math.min(per, TE()[id].length - from); let c = 0; for (let j = 0; j < n; j++) if (A.tcheck(from + j, true)) c++; rerender(); toast('Bộ này: đúng ' + c + '/' + n); if (Object.values(S.tenseEx[id] || {}).filter(Boolean).length >= 10) markDone('grammar'); },
+  treset() { if (!confirm('Làm lại tất cả bài của thì này?')) return; delete (S.tenseEx || {})[TG.id]; TG.vals[TG.id] = {}; TG.shown[TG.id] = {}; save(); rerender(); },
+  popen(id) { PG.id = id; rerender(); window.scrollTo(0, 0); },
+  pback() { PG.id = null; rerender(); window.scrollTo(0, 0); },
+  pex() { PG.ex = true; PG.set = 0; PG.ans = {}; rerender(); window.scrollTo(0, 0); },
+  pbackex() { PG.ex = false; rerender(); window.scrollTo(0, 0); },
+  pset(k) { PG.set = k; rerender(); window.scrollTo(0, 0); },
+  pans(i, v) { if (PG.ans[i] != null) return; PG.ans[i] = v; const ok = DATA.pos.ex[i][2] === v; (S.posEx ||= {})[i] = ok ? 1 : 0; save(); rerender(); }
+});
 
 /* ---------- bản sao dự phòng thứ hai: IndexedDB + file tự động (phòng khi trình duyệt xóa dữ liệu trang) ---------- */
 var idbP = null, mirT = null, fileT = null, fileH = null, PERSIST = null, lastFile = 0, filePending = false;
