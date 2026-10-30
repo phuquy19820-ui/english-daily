@@ -1,0 +1,58 @@
+DATA.essay = DATA.essay || {};
+Object.assign(DATA.essay, {
+sp2: {type: 'Bài viết mẫu – Tập gym', q: 'Describe your gym routine.', vi: 'Mô tả lịch tập gym của bạn.',
+p: ['I go to the gym three times a week, usually after work. I start with ten minutes of cardio on the treadmill to warm up, and then I move on to weights such as squats, bench presses and dumbbell curls.',
+'I do three sets of ten repetitions for each exercise and rest for a minute between sets. On the last day, I focus on core exercises like planks and sit-ups, and I finish with some stretching.',
+'My goal is to build strength and stay fit rather than lose weight. I drink plenty of water, eat enough protein and sleep at least seven hours, because recovery is as important as training.'],
+v: ['Tập 3 buổi/tuần: khởi động bằng máy chạy bộ rồi tạ.', '3 hiệp × 10 lần, nghỉ 1 phút; ngày cuối tập cơ lõi và giãn cơ.', 'Mục tiêu tăng sức mạnh; uống nước, ăn đủ đạm, ngủ đủ.'],
+k: [['treadmill', 'máy chạy bộ'], ['weights', 'tạ'], ['sets and repetitions', 'hiệp và số lần lặp'], ['core exercises', 'bài tập cơ lõi'], ['stretching', 'giãn cơ'], ['recovery', 'sự hồi phục']],
+g: [['As important as', 'So sánh bằng.', 'Recovery is as important as training.'], ['Rather than + V', 'Hơn là, thay vì.', 'To build strength rather than lose weight.']]},
+
+sp3: {type: 'Bài viết mẫu – Xem bóng đá', q: 'Write about watching a football match.', vi: 'Viết về việc xem một trận bóng đá.',
+p: ['Last Saturday I watched the final of the local league with my friends. The stadium was full, and fans waved flags and sang songs long before kick-off.',
+'The match was tense. Our team scored first in the twentieth minute, but the opponents equalised just before half-time. In the second half, our striker hit the post, and the goalkeeper made two brilliant saves.',
+'In the last minute, we won a penalty and scored. The final whistle blew, and the whole stadium exploded with joy. We won two-one, and it was a moment I will never forget.'],
+v: ['Xem chung kết giải địa phương; sân đông, cổ động viên hát vang.', 'Ghi bàn phút 20, đối thủ gỡ hòa trước hiệp nghỉ; tiền đạo trúng cột, thủ môn cứu thua.', 'Phút cuối có phạt đền, thắng 2–1.'],
+k: [['kick-off', 'giờ bắt đầu trận'], ['score', 'ghi bàn'], ['equalise', 'gỡ hòa'], ['half-time', 'giờ nghỉ giữa hiệp'], ['penalty', 'quả phạt đền'], ['final whistle', 'tiếng còi mãn cuộc']],
+g: [['Quá khứ đơn kể diễn biến', 'V2 theo trình tự thời gian.', 'Our team scored first, but the opponents equalised.'], ['A moment I will never forget', 'Mệnh đề quan hệ lược “that”.', 'It was a moment I will never forget.']]},
+
+sp4: {type: 'Bài viết mẫu – Chấn thương & thể lực', q: 'Write a paragraph about preventing sports injuries.', vi: 'Viết đoạn về phòng tránh chấn thương thể thao.',
+p: ['Sports injuries such as sprains, strains and pulled muscles are common, but many can be avoided. The most important step is to warm up for at least ten minutes before exercise to prepare the body.',
+'You should also wear suitable shoes and equipment, increase the intensity of training gradually, and never ignore pain. If you feel sharp pain, stop immediately and rest.',
+'If an injury happens, remember the “RICE” method: rest, ice, compression and elevation. See a doctor if the swelling does not go down after a few days, and return to training only when you have fully recovered.'],
+v: ['Bong gân, căng cơ phổ biến nhưng phòng được: khởi động kỹ.', 'Giày phù hợp, tăng cường độ dần, đau nhói thì dừng.', 'Chấn thương: RICE; đi khám nếu sưng lâu; chỉ tập lại khi hồi phục.'],
+k: [['sprain', 'bong gân'], ['strain', 'căng cơ'], ['warm up', 'khởi động'], ['intensity', 'cường độ'], ['swelling', 'sưng'], ['recover', 'hồi phục']],
+g: [['Can be + V3', 'Bị động với can: có thể được…', 'Many can be avoided.'], ['Should + V', 'Lời khuyên.', 'You should wear suitable shoes.']]},
+
+hl1: {type: 'Bài viết mẫu – Triệu chứng thường gặp', q: 'Describe the symptoms of a common cold and how to treat it.', vi: 'Mô tả triệu chứng cảm lạnh và cách điều trị.',
+p: ['A common cold is a mild infection that causes a runny nose, sore throat, cough and sneezing. Some people also have a slight fever, a headache and aches in the muscles.',
+'There is no medicine that cures a cold, but you can relieve the symptoms. Rest at home, drink plenty of warm fluids and use a nasal spray or throat sweets if necessary. Paracetamol can help with fever and pain.',
+'Most colds go away within a week. However, see a doctor if you have a high temperature for more than three days, difficulty breathing or chest pain, because these may be signs of a more serious illness.'],
+v: ['Cảm lạnh: sổ mũi, đau họng, ho, hắt hơi, sốt nhẹ, đau đầu.', 'Không có thuốc chữa nhưng giảm triệu chứng: nghỉ ngơi, uống ấm, xịt mũi, paracetamol.', 'Khỏi sau một tuần; đi khám nếu sốt cao >3 ngày, khó thở, đau ngực.'],
+k: [['runny nose', 'sổ mũi'], ['sore throat', 'đau họng'], ['cough', 'ho'], ['fever', 'sốt'], ['relieve the symptoms', 'làm giảm triệu chứng'], ['difficulty breathing', 'khó thở']],
+g: [['Cause + danh từ', 'Gây ra điều gì.', 'A cold causes a runny nose and a cough.'], ['However (nhấn mạnh cảnh báo)', 'Từ nối để đưa lời khuyên quan trọng.', 'However, see a doctor if you have a high temperature.']]},
+
+hl2: {type: 'Bài viết mẫu – Đi khám & hiệu thuốc', q: 'Write a dialogue-style paragraph about visiting a doctor and a pharmacy.', vi: 'Viết đoạn về việc đi khám và mua thuốc.',
+p: ['Yesterday I felt dizzy and had a bad headache, so I booked an appointment with my doctor. At the clinic, I filled in a form and waited about ten minutes before the doctor called me in.',
+'The doctor asked me about my symptoms, took my temperature and checked my blood pressure. She said I was dehydrated and tired, and she wrote a prescription for some vitamins and painkillers.',
+'At the pharmacy, the pharmacist explained the dosage: one tablet after meals, twice a day. She also warned me about possible side effects. I paid and went home to rest.'],
+v: ['Chóng mặt, đau đầu, đặt lịch khám, điền phiếu, chờ.', 'Bác sĩ hỏi triệu chứng, đo nhiệt độ, huyết áp; kê đơn vitamin, thuốc giảm đau.', 'Dược sĩ giải thích liều dùng, tác dụng phụ.'],
+k: [['book an appointment', 'đặt lịch hẹn'], ['symptoms', 'triệu chứng'], ['blood pressure', 'huyết áp'], ['prescription', 'đơn thuốc'], ['dosage', 'liều dùng'], ['side effects', 'tác dụng phụ']],
+g: [['So (kết quả)', 'Chỉ kết quả của việc trước.', 'I felt dizzy, so I booked an appointment.'], ['Wrote a prescription for', 'Kê đơn cho.', 'She wrote a prescription for vitamins and painkillers.']]},
+
+hl3: {type: 'Bài viết mẫu – Ăn uống & lối sống lành mạnh', q: 'Write about how to live a healthy lifestyle.', vi: 'Viết về cách sống lành mạnh.',
+p: ['A healthy lifestyle starts with a balanced diet. You should eat plenty of vegetables, fruit, whole grains and lean protein, and avoid too much sugar, salt and fried food. Drinking enough water every day is also essential.',
+'Regular exercise is equally important. Adults should aim for at least thirty minutes of moderate activity, such as brisk walking or cycling, on most days of the week. Even small habits, like taking the stairs, make a difference.',
+'Finally, get enough sleep and manage stress through hobbies or relaxation. Together, these habits lower the risk of heart disease and diabetes, and they help you feel more energetic and positive.'],
+v: ['Ăn cân bằng: rau, trái cây, ngũ cốc, đạm nạc; hạn chế đường, muối, chiên; uống đủ nước.', 'Tập đều: ít nhất 30 phút mỗi ngày; thói quen nhỏ như đi cầu thang.', 'Ngủ đủ, kiểm soát căng thẳng; giảm nguy cơ bệnh tim, tiểu đường.'],
+k: [['balanced diet', 'chế độ ăn cân bằng'], ['whole grains', 'ngũ cốc nguyên hạt'], ['lean protein', 'đạm nạc'], ['moderate activity', 'vận động vừa phải'], ['manage stress', 'kiểm soát căng thẳng'], ['lower the risk of', 'giảm nguy cơ']],
+g: [['Aim for + danh từ', 'Đặt mục tiêu.', 'Adults should aim for at least thirty minutes of activity.'], ['Make a difference', 'Tạo ra khác biệt.', 'Even small habits make a difference.']]},
+
+hl4: {type: 'Bài viết mẫu – Sức khỏe tinh thần & khẩn cấp', q: 'Write about looking after mental health and what to do in an emergency.', vi: 'Viết về chăm sóc sức khỏe tinh thần và xử lý khẩn cấp.',
+p: ['Mental health is as important as physical health. When we feel stressed, anxious or low for a long time, it is important to talk to someone we trust, take regular breaks and make time for activities we enjoy.',
+'Exercise, enough sleep and mindfulness can reduce stress, but sometimes professional help is necessary. A counsellor or doctor can offer treatment, and there is no shame in asking for support.',
+'In an emergency, such as an accident or chest pain, stay calm and call the emergency number immediately. Give your exact location, describe what has happened, and follow the operator’s instructions until help arrives.'],
+v: ['Sức khỏe tinh thần quan trọng như thể chất: tâm sự, nghỉ ngơi, làm điều mình thích.', 'Tập thể dục, ngủ đủ, chánh niệm; cần thì nhờ chuyên gia, không có gì phải xấu hổ.', 'Khẩn cấp: bình tĩnh, gọi số cấp cứu, nói rõ vị trí và tình huống.'],
+k: [['mental health', 'sức khỏe tinh thần'], ['anxious', 'lo âu'], ['take a break', 'nghỉ giải lao'], ['mindfulness', 'chánh niệm'], ['professional help', 'sự giúp đỡ chuyên môn'], ['emergency number', 'số khẩn cấp']],
+g: [['There is no shame in + V-ing', 'Không có gì đáng xấu hổ khi…', 'There is no shame in asking for support.'], ['Until + mệnh đề', 'Cho đến khi.', 'Follow the instructions until help arrives.']]}
+});

@@ -418,6 +418,25 @@ function speakingHTML() {
 
 
 /* =====================  CHỦ ĐỀ (Tài chính · Đồ vật · Giao tiếp)  ===================== */
+/* ---------- BÀI VĂN MẪU theo chủ đề ---------- */
+const phrasesOld = u => `<p class="muted">Nghe → nhại lại → bấm 🎙️ để kiểm tra phát âm.</p><div class="card">${u.p.map((x, i) => `<div class="task"><span><b>${esc(x[0])}</b><br><small class="muted">${esc(x[1])}</small><div id="pr${i}" class="res"></div></span><span><button class="ico" onclick="A.say(this.dataset.t)" data-t="${esc(x[0])}">🔊</button><button class="ico" onclick="A.mic(this.dataset.t,'pr${i}')" data-t="${esc(x[0])}">🎙️</button></span></div>`).join('')}</div>`;
+function essayView(u) {
+  const e = DATA.essay[u.id];
+  S.essay ||= {}; const st = (S.essay[u.id] ||= {draft: ''});
+  const hl = p => { let h = esc(p); e.k.forEach(k => { const w = esc(k[0].replace(/…/g, '').trim()); if (!w) return; const i = h.toLowerCase().indexOf(w.toLowerCase()); if (i >= 0) h = h.slice(0, i) + '<mark>' + h.slice(i, i + w.length) + '</mark>' + h.slice(i + w.length); }); return h; };
+  const paras = e.p.map((p, i) => `<div class="esp"><p>${hl(p)}</p><div class="row"><button class="ico" title="Nghe đoạn này" onclick="A.esay(${i})">🔊</button>${e.v && e.v[i] ? `<button class="acc" onclick="this.nextElementSibling.hidden=!this.nextElementSibling.hidden">Nghĩa VI</button><small class="muted" hidden>${esc(e.v[i])}</small>` : ''}</div></div>`).join('');
+  const n = wcount(e.p.join(' '));
+  return `<div class="card"><small class="muted">${esc(e.type)} · khoảng ${n} từ</small><h3>${esc(e.q)}</h3>${e.vi ? `<small class="muted">${esc(e.vi)}</small>` : ''}
+    <div class="row"><button class="btn sm" onclick="A.eplay('${u.id}')">▶ Nghe cả bài</button><button class="btn sm ghost" onclick="A.tstop()">⏹ Dừng</button><button class="btn sm ghost" onclick="A.eprint()">🖨️ In</button></div></div>
+    <div class="card essay ${T.hideEssay ? 'blur' : ''}">${paras}</div>
+    <div class="card"><h3>📝 Từ vựng &amp; cụm từ đáng học trong bài</h3>${e.k.map((k, i) => `<div class="task"><span><b>${esc(k[0])}</b> <small class="muted">${esc(k[1])}</small></span><span><button class="ico" onclick="A.say(this.dataset.t)" data-t="${esc(k[0])}">🔊</button><button class="ico" title="Thêm vào thẻ ôn" onclick="A.eadd('${u.id}',${i})">＋</button></span></div>`).join('')}
+    <div class="row"><button class="btn sm ghost" onclick="A.eaddall('${u.id}')">＋ Thêm tất cả vào thẻ ôn</button></div></div>
+    <div class="card"><h3>📘 Ngữ pháp &amp; cấu trúc trong bài</h3>${e.g.map(g => `<p><b>${esc(g[0])}</b><br>${esc(g[1])}<br><small class="muted"><i>${esc(g[2])}</i></small></p>`).join('')}</div>
+    <div class="card"><h3>✍️ Luyện viết lại</h3><p class="muted">Đọc bài mẫu, rồi che lại và tự viết bằng lời của bạn (bài tự động lưu).</p>
+    <div class="row"><button class="btn sm ghost" onclick="A.ehide()">${T.hideEssay ? '👁 Hiện bài mẫu' : '🙈 Che bài mẫu'}</button><button class="btn sm ghost" onclick="A.ecopy('${u.id}')">⌨️ Nghe từng câu để chép</button></div>
+    <textarea id="esdraft" rows="10" style="width:100%;margin-top:8px;font:inherit;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx)" oninput="A.edraft('${u.id}',this.value)" placeholder="Viết bài của bạn ở đây…">${esc(st.draft || '')}</textarea>
+    <div class="row"><small class="muted" id="escount">${wcount(st.draft || '')} từ (mục tiêu ~${n})</small><button class="btn sm" onclick="A.echeck('${u.id}')">Kiểm tra cụm từ khóa đã dùng</button></div><div id="esres"></div></div>`;
+}
 let T = {track: null, unit: null, tab: 'words', quiz: null, hideB: false, showVi: true};
 const tkey = (u, i) => 't_' + u + '_' + i;
 const isAdded = id => S.custom.some(c => c.id === id);
@@ -441,14 +460,14 @@ views.topics = {render() {
     return `<button class="btn ghost" onclick="A.tback()">← Các chủ đề</button><h1>${tr.icon} ${esc(tr.name)}</h1><div class="grid two">${tr.units.map(u => { const sc = S.topicScore && S.topicScore[u.id]; return `<a class="card link" href="#topics" onclick="A.tunit('${u.id}')"><h3>${esc(u.title)}</h3><small class="muted">${u.w.length} từ · ${u.p.length} mẫu câu · ${u.d.length} câu hội thoại</small><div>${sc != null ? 'Quiz gần nhất: <b>' + sc + '</b>' : 'Chưa làm quiz'}</div></a>`; }).join('')}</div>`;
   }
   const u = tr.units.find(x => x.id === T.unit);
-  const tabs = [['words', 'Từ vựng'], ['phrases', 'Mẫu câu'], ['dialog', 'Hội thoại'], ['quiz', 'Quiz']].map(t => `<button class="${T.tab === t[0] ? 'on' : ''}" onclick="A.ttab('${t[0]}')">${t[1]}</button>`).join('');
+  const tabs = [['words', 'Từ vựng'], ['phrases', 'Bài văn mẫu'], ['dialog', 'Hội thoại'], ['quiz', 'Quiz']].map(t => `<button class="${T.tab === t[0] ? 'on' : ''}" onclick="A.ttab('${t[0]}')">${t[1]}</button>`).join('');
   let body = '';
   if (T.tab === 'words') {
     const allAdded = u.w.every((x, i) => isAdded(tkey(u.id, i)));
     body = `<div class="row"><button class="btn sm" onclick="A.taddall()" ${allAdded ? 'disabled' : ''}>${allAdded ? '✓ Đã thêm tất cả vào thẻ ôn' : '＋ Thêm tất cả vào thẻ ôn (Leitner)'}</button></div>
     <div class="card">${u.w.map((x, i) => `<div class="task"><span><b>${esc(x[0])}</b> <small class="muted">${esc(x[1])}</small> ${sayBtns(x[0])}${hsFor(x[0],1).length ? `<button class="acc" onclick="A.hword(this.dataset.t)" data-t="${esc(x[0])}">🎙️ câu</button>` : ''}<br>${esc(x[2])}<br><small class="muted"><i>${esc(x[3])}</i></small> <button class="ico" onclick="A.say(this.dataset.t)" data-t="${esc(x[3])}">🔊</button></span><button class="btn sm ghost" onclick="A.tadd(${i})" ${isAdded(tkey(u.id, i)) ? 'disabled' : ''}>${isAdded(tkey(u.id, i)) ? '✓' : '＋ Ôn'}</button></div>`).join('')}</div>`;
   }
-  if (T.tab === 'phrases') body = `<p class="muted">Nghe → nhại lại → bấm 🎙️ để kiểm tra phát âm.</p><div class="card">${u.p.map((x, i) => `<div class="task"><span><b>${esc(x[0])}</b><br><small class="muted">${esc(x[1])}</small><div id="pr${i}" class="res"></div></span><span><button class="ico" onclick="A.say(this.dataset.t)" data-t="${esc(x[0])}">🔊</button><button class="ico" onclick="A.mic(this.dataset.t,'pr${i}')" data-t="${esc(x[0])}">🎙️</button></span></div>`).join('')}</div>`;
+  if (T.tab === 'phrases') body = (DATA.essay && DATA.essay[u.id]) ? essayView(u) : phrasesOld(u);
   if (T.tab === 'dialog') body = `<div class="row"><button class="btn sm" onclick="A.tplay()">▶ Nghe cả hội thoại</button><button class="btn sm ghost" onclick="A.tstop()">⏹ Dừng</button><label class="chk"><input type="checkbox" ${T.showVi ? 'checked' : ''} onchange="A.tvi(this.checked)"> Hiện nghĩa tiếng Việt</label><label class="chk"><input type="checkbox" ${T.hideB ? 'checked' : ''} onchange="A.thideB(this.checked)"> Đóng vai A (ẩn lời B để tự nói)</label></div>
     <div class="card">${u.d.map((x, i) => `<div class="task" style="${x[0] === 'B' ? 'flex-direction:row-reverse;text-align:right' : ''}"><span class="${x[0] === 'B' && T.hideB ? 'blur' : ''}" ${x[0] === 'B' && T.hideB ? 'onclick="this.classList.remove(\'blur\')"' : ''}><small class="muted">${x[0]}</small><br><b>${esc(x[1])}</b>${T.showVi ? `<br><small class="muted">${esc(x[2])}</small>` : ''}</span><button class="ico" onclick="A.say(this.dataset.t)" data-t="${esc(x[1])}">🔊</button></div>`).join('')}</div><p class="muted">🎙️ Giọng đọc hội thoại là giọng máy. Nghe người thật ở tab <a href="#video">🎬 Video</a>.</p><p class="muted">Cách luyện: nghe cả đoạn → đọc theo → bật “đóng vai A”, tự nói lời B rồi bấm vào chỗ mờ để đối chiếu.</p>`;
   if (T.tab === 'quiz') {
@@ -1970,6 +1989,19 @@ Object.assign(A, {
   pbackex() { PG.ex = false; rerender(); window.scrollTo(0, 0); },
   pset(k) { PG.set = k; rerender(); window.scrollTo(0, 0); },
   pans(i, v) { if (PG.ans[i] != null) return; PG.ans[i] = v; const ok = DATA.pos.ex[i][2] === v; (S.posEx ||= {})[i] = ok ? 1 : 0; save(); rerender(); }
+});
+
+/* ---------- hành động: bài văn mẫu ---------- */
+Object.assign(A, {
+  esay(i) { const e = DATA.essay[T.unit]; if (!e) return; playToken++; if (window.speechSynthesis) speechSynthesis.cancel(); say(e.p[i], 0.9, 1); },
+  eplay(id) { const e = DATA.essay[id]; const my = ++playToken; if (window.speechSynthesis) speechSynthesis.cancel(); let i = 0; const next = () => { if (my !== playToken || i >= e.p.length) return; say(e.p[i++], 0.9, 1, next); }; next(); },
+  eprint() { window.print(); },
+  ehide() { T.hideEssay = !T.hideEssay; rerender(); },
+  edraft(id, v) { S.essay ||= {}; (S.essay[id] ||= {}).draft = v; const c = document.getElementById('escount'); if (c) c.textContent = wcount(v) + ' từ'; save(); },
+  echeck(id) { const e = DATA.essay[id], d = ((S.essay || {})[id] || {}).draft || '', low = d.toLowerCase(); const cl = k => k[0].toLowerCase().replace(/…/g, '').trim(); const used = e.k.filter(k => low.includes(cl(k))); const r = document.getElementById('esres'); if (r) r.innerHTML = `<p>Đã dùng <b>${used.length}/${e.k.length}</b> cụm từ khóa.</p>` + (used.length < e.k.length ? '<p class="muted">Chưa dùng: ' + e.k.filter(k => !used.includes(k)).map(k => esc(k[0])).join(' · ') + '</p>' : '<p>👏 Tuyệt vời!</p>'); },
+  ecopy(id) { const e = DATA.essay[id]; T.hideEssay = false; toast('Nghe từng câu rồi gõ lại vào ô bên dưới'); const sents = e.p.join(' ').match(/[^.!?]+[.!?]+/g) || []; let i = 0; const my = ++playToken; const go = () => { if (my !== playToken || i >= sents.length) return; say(sents[i++].trim(), 0.8, 1, () => setTimeout(go, 7000)); }; go(); },
+  eadd(id, i) { const k = DATA.essay[id].k[i], key = 'es_' + id + '_' + i; if (isAdded(key)) return toast('Đã có trong thẻ ôn'); S.custom.push({id: key, w: k[0], ipa: '', vi: k[1], ex: '', cat: 'essay'}); save(); toast('Đã thêm vào thẻ ôn'); },
+  eaddall(id) { let n = 0; DATA.essay[id].k.forEach((k, i) => { const key = 'es_' + id + '_' + i; if (!isAdded(key)) { S.custom.push({id: key, w: k[0], ipa: '', vi: k[1], ex: '', cat: 'essay'}); n++; } }); save(); toast('Đã thêm ' + n + ' cụm vào thẻ ôn'); }
 });
 
 /* ---------- bản sao dự phòng thứ hai: IndexedDB + file tự động (phòng khi trình duyệt xóa dữ liệu trang) ---------- */
