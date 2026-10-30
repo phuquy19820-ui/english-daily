@@ -907,7 +907,7 @@ function gRender() {
   const ltBtn = g.ltDone || g.loading ? '' : (S.settings.ltConsent ? '<button class="btn sm" onclick="A.glt()">🔎 Kiểm tra lỗi sâu hơn (LanguageTool)</button>' : `<div class="card warn"><b>Kiểm tra lỗi sâu hơn bằng LanguageTool</b><br><small>Bài viết sẽ được <b>gửi đến máy chủ languagetool.org</b> (dịch vụ miễn phí của bên thứ ba, có giới hạn lượt dùng). Đừng gửi nếu bài chứa thông tin nhạy cảm (số tài khoản, địa chỉ, mật khẩu…).</small><div class="row"><label class="chk"><input type="checkbox" id="gconsent"> Nhớ lựa chọn, không hỏi lại</label><button class="btn sm" onclick="A.glt(true)">Đồng ý và kiểm tra</button></div></div>`);
   const issuesHTML = g.issues.length ? g.issues.map((i, k) => `<div class="gi"><span class="gtag ${i.type === 'style' ? 'st' : ''}">${esc(G_VI[i.type] || G_VI.uncategorized)}</span> <code>${esc(g.text.slice(Math.max(0, i.off - 18), i.off))}<mark class="gm">${esc(g.text.slice(i.off, i.off + i.len))}</mark>${esc(g.text.slice(i.off + i.len, i.off + i.len + 18))}</code><br><small>${esc(i.msg)}${gGloss(i) && i.src !== 'local' ? ' — <i>' + esc(gGloss(i)) + '</i>' : ''}</small>${i.reps && i.reps.length ? `<div class="row">${i.reps.slice(0, 4).map((x, j) => `<button class="btn sm ghost" ${g.taId ? `onclick="A.gfix(${k},${j})"` : 'disabled'}>→ ${esc(x) || '(xóa)'}</button>`).join('')}</div>` : ''}</div>`).join('') : '<p>🎉 Không phát hiện lỗi nào bằng các bộ kiểm tra hiện có. Hãy đọc lại một lần nữa để chắc chắn.</p>';
   const corrected = gApplyAll(g.text, g.issues);
-  box.innerHTML = `<div class="card gradecard"><div class="row" style="justify-content:space-between"><h3 style="margin:0">📝 Kết quả chấm bài</h3><button class="btn sm ghost" onclick="A.gclose()">Đóng</button></div>
+  box.innerHTML = `<div class="card gradecard"><div class="row" style="justify-content:space-between"><h3 style="margin:0">📝 Kết quả chấm bài</h3><button class="btn sm ghost" onclick="A.gradeclose()">Đóng</button></div>
    <div class="center"><div class="gscore">${r.overall}<small>/10</small></div>${/^ielts/.test(g.kind) ? (() => { const ib = ieltsBandOf(r.sc, r.a.nW, g.min); return `<p><b>Band ước lượng: ${ib.overall.toFixed(1)}</b> ${ib.overall >= 6.5 ? '✅ đạt mục tiêu 6.5' : '(mục tiêu 6.5: còn ' + (6.5 - ib.overall).toFixed(1) + ')'}<br><small class="muted">Task ${g.kind === 'ielts1' ? 'Achievement' : 'Response'} ${ib.c.ta.toFixed(1)} · Coherence & Cohesion ${ib.c.cc.toFixed(1)} · Lexical Resource ${ib.c.lr.toFixed(1)} · Grammar ${ib.c.gra.toFixed(1)}</small></p>`; })() : ''}<p class="muted">Cấp ước lượng: <b>${cefr}</b> · ${r.a.nW} từ · ${g.issues.length} gợi ý sửa (${r.density}/100 từ)</p></div>
    ${bar('Nội dung & hoàn thành yêu cầu', r.sc.content)}${bar('Bố cục & liên kết', r.sc.org)}${bar('Từ vựng', r.sc.vocab)}${bar('Ngữ pháp & chính xác', r.sc.gram)}
    <p class="muted">⚠️ Điểm do máy ước lượng từ số liệu bề mặt và các bộ kiểm tra lỗi; không thay thế giáo viên. Dùng để theo dõi tiến bộ và biết chỗ cần sửa.</p>
@@ -1339,7 +1339,7 @@ const A = window.A = {
     if (S.settings.ltConsent) gRunLT(); else gRender();
   },
   gundo() { const g = GR, ta = document.getElementById(g.taId); if (!ta || g.undo == null) return; ta.value = g.undo; ta.dispatchEvent(new Event('input')); g.text = ta.value; g.undo = null; g.issues = gMergeIssues(gLocalIssues(g.text), []); g.ltDone = false; g.lt = []; gRender(); },
-  gclose() { const g = GR; GR = null; const el = g && document.getElementById(g.boxId); if (el) el.innerHTML = ''; },
+  gradeclose() { const g = GR; GR = null; const el = g && document.getElementById(g.boxId); if (el) el.innerHTML = ''; },
   /* IELTS 6.5 */
   i65tab(t) { IH.tab = t; rerender(); window.scrollTo(0, 0); },
   i65plan(w, t, v) { i65State().plan['w' + w + 't' + t] = v; save(); rerender(); },
@@ -1903,8 +1903,8 @@ function tenseView() {
    ${G_.groups.map(g => `<h3>${esc(g.name)}</h3><p class="muted">${esc(g.tip)}</p><div class="grid two">${g.ids.map(id => { const t = G_.tenses[id], p = tprog(id); return `<a class="card link" href="#grammar" onclick="A.topen('${id}')"><small class="muted">${t.no}. ${esc(t.group)} · ${esc(t.level)}</small><h3>${esc(t.vi)}</h3><small>${esc(t.en)}</small><br><code>${esc(t.formula.aff)}</code>${tbar(p.ok, p.total)}<small class="muted">${p.ok}/${p.total} bài đúng</small></a>`; }).join('')}</div>`).join('')}`;
 }
 function tenseDetail(t) {
-  const p = tprog(TG.id), head = `<button class="btn ghost" onclick="A.tback()">← Các thì</button><h1>${t.no}. ${esc(t.vi)}</h1><p class="muted">${esc(t.en)} · ${esc(t.group)} · mức ${esc(t.level)}</p>
-   <div class="tabs"><button class="${TG.tab === 'learn' ? 'on' : ''}" onclick="A.ttab('learn')">📖 Bài giảng</button><button class="${TG.tab === 'ex' ? 'on' : ''}" onclick="A.ttab('ex')">✍️ Luyện tập (${p.ok}/${p.total})</button></div>`;
+  const p = tprog(TG.id), head = `<button class="btn ghost" onclick="A.gxback()">← Các thì</button><h1>${t.no}. ${esc(t.vi)}</h1><p class="muted">${esc(t.en)} · ${esc(t.group)} · mức ${esc(t.level)}</p>
+   <div class="tabs"><button class="${TG.tab === 'learn' ? 'on' : ''}" onclick="A.gxtab('learn')">📖 Bài giảng</button><button class="${TG.tab === 'ex' ? 'on' : ''}" onclick="A.gxtab('ex')">✍️ Luyện tập (${p.ok}/${p.total})</button></div>`;
   if (TG.tab === 'ex') return head + tenseEx(TG.id);
   const li = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
   return head + `<div class="card"><h3>🎯 Ý chính</h3><p>${esc(t.core)}</p><p class="muted">Trục thời gian: <code>${esc(t.timeline)}</code></p></div>
@@ -1915,7 +1915,7 @@ function tenseDetail(t) {
    <div class="card"><h3>💬 Ví dụ</h3>${t.examples.map(e => `<p>${esc(e[0])} ${tsay(e[0])}<br><small class="muted">${esc(e[1])}</small></p>`).join('')}</div>
    <div class="card"><h3>⚠️ Lỗi thường gặp</h3>${t.mistakes.map(m => `<p>❌ <s>${esc(m[0])}</s><br>✅ <b>${esc(m[1])}</b><br><small class="muted">${esc(m[2])}</small></p>`).join('')}</div>
    <div class="card" style="background:var(--okbg,#e7f5ff)"><h3>🧠 Mẹo nhớ</h3><p>${esc(t.memo)}</p><p class="muted"><b>So sánh:</b> ${esc(t.compare)}</p></div>
-   <div class="row"><button class="btn" onclick="A.ttab('ex')">✍️ Làm 45 bài luyện tập</button></div>`;
+   <div class="row"><button class="btn" onclick="A.gxtab('ex')">✍️ Làm 45 bài luyện tập</button></div>`;
 }
 const gnorm = x => String(x).toLowerCase().replace(/[’‘`]/g, "'").replace(/[.?!]+$/g, '').replace(/\s+/g, ' ').trim();
 function tenseEx(id) {
@@ -1931,7 +1931,7 @@ function posView() {
   const P_ = DATA.pos; if (!P_) return `<h1>📘 Ngữ pháp</h1>${gmTabs()}<div class="card">Chưa tải được dữ liệu.</div>`;
   if (PG.ex) return posEx();
   if (PG.id) { const p = P_.list.find(x => x.id === PG.id), li = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join('')}</ul>`;
-    return `<button class="btn ghost" onclick="A.pback()">← 10 từ loại</button><h1>${esc(p.vi)} <small class="muted">(${esc(p.abbr)} · ${esc(p.en)})</small></h1>
+    return `<button class="btn ghost" onclick="A.pxback()">← 10 từ loại</button><h1>${esc(p.vi)} <small class="muted">(${esc(p.abbr)} · ${esc(p.en)})</small></h1>
      <div class="card"><h3>📖 Định nghĩa</h3><p>${esc(p.def)}</p><p><b>Chức năng:</b> ${esc(p.role)}</p><p><b>Vị trí trong câu:</b> ${esc(p.position)}</p></div>
      <div class="card"><h3>🔎 Dấu hiệu nhận biết</h3>${li(p.signs)}</div>
      <div class="card"><h3>🗂️ Các loại</h3><table class="tbl">${p.types.map(t => `<tr><td><b>${esc(t[0])}</b><br><small class="muted">${esc(t[1])}</small></td><td>${esc(t[2])} ${tsay(t[2].split(/[,.]/)[0])}</td></tr>`).join('')}</table></div>
@@ -1953,8 +1953,8 @@ function posEx() {
 Object.assign(A, {
   gmode(m) { GM = m; G = {open: null, ans: {}}; TG.id = null; PG.id = null; PG.ex = false; rerender(); window.scrollTo(0, 0); },
   topen(id) { TG.id = id; TG.tab = 'learn'; TG.set = 0; rerender(); window.scrollTo(0, 0); },
-  tback() { TG.id = null; rerender(); window.scrollTo(0, 0); },
-  ttab(t) { TG.tab = t; rerender(); window.scrollTo(0, 0); },
+  gxback() { TG.id = null; rerender(); window.scrollTo(0, 0); },
+  gxtab(t) { TG.tab = t; rerender(); window.scrollTo(0, 0); },
   tset(k) { TG.set = k; rerender(); window.scrollTo(0, 0); },
   tcheck(i, quiet) {
     const id = TG.id, it = TE()[id][i], v = (TG.vals[id] || {})[i];
@@ -1965,7 +1965,7 @@ Object.assign(A, {
   tcheckset() { const id = TG.id, per = 15, from = TG.set * per, n = Math.min(per, TE()[id].length - from); let c = 0; for (let j = 0; j < n; j++) if (A.tcheck(from + j, true)) c++; rerender(); toast('Bộ này: đúng ' + c + '/' + n); if (Object.values(S.tenseEx[id] || {}).filter(Boolean).length >= 10) markDone('grammar'); },
   treset() { if (!confirm('Làm lại tất cả bài của thì này?')) return; delete (S.tenseEx || {})[TG.id]; TG.vals[TG.id] = {}; TG.shown[TG.id] = {}; save(); rerender(); },
   popen(id) { PG.id = id; rerender(); window.scrollTo(0, 0); },
-  pback() { PG.id = null; rerender(); window.scrollTo(0, 0); },
+  pxback() { PG.id = null; rerender(); window.scrollTo(0, 0); },
   pex() { PG.ex = true; PG.set = 0; PG.ans = {}; rerender(); window.scrollTo(0, 0); },
   pbackex() { PG.ex = false; rerender(); window.scrollTo(0, 0); },
   pset(k) { PG.set = k; rerender(); window.scrollTo(0, 0); },
